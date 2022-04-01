@@ -1,0 +1,59 @@
+# This sample, non-production-ready code contains a Virtual Kubelet EC2-based provider and example VM Agent implementation.
+# © 2021 Amazon Web Services, Inc. or its affiliates. All Rights Reserved.
+#
+# This AWS Content is provided subject to the terms of the AWS Customer Agreement
+# available at http://aws.amazon.com/agreement or other written agreement between
+# Customer and either Amazon Web Services, Inc. or Amazon Web Services EMEA SARL or both.
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: virtual-kubelet-cfg
+  namespace: kube-system
+data:
+  # property-like keys; each key maps to a simple value
+  # Required Values for Virtual Kubelet
+  config.json: |-
+    {
+      "ManagementSubnet": "subnet-bad5ede0febe6dd",
+      "ClusterName": "aws-virtual-kubelet",
+      "Region": "us-west-2",
+      "VMConfig": {
+        "DefaultAMI": "ami-badf005ba117ab1e5",
+        "InitData": "base64encoded"
+      },
+      "BootstrapAgent": {
+        "S3Bucket": "s3-bucket-name",
+        "S3Key": "vkvmagent-key-name",
+        "GRPCPort": 8200,
+        "InitData": "base64encoded"
+      },
+      "HealthConfig": {
+        "UnhealthyThresholdCount": 3,
+        "UnhealthyMaxCount": 20,
+        "HealthCheckIntervalSeconds": 10
+      },
+      "VKVMAgentConnectionConfig": {
+        "TimeoutSeconds": 10,
+        "MinConnectTimeoutSeconds": 1,
+        "Backoff": {
+          "BaseDelaySeconds": 1,
+          "Multiplier": 1.5,
+          "Jitter": 0.5,
+          "MaxDelaySeconds": 300
+        },
+        "Keepalive": {
+          "TimeSeconds": 10,
+          "TimeoutSeconds": 30
+        }
+      },
+      "WarmPoolConfig": [{
+          "DesiredCount": "2",
+          "IamInstanceProfile": "vk-instance-profile",
+          "SecurityGroups": ["badf005ba117ab1e5", "badf005ba117ab1e5"],
+          "KeyPair": "DoNotLogin",
+          "ImageID": "ami-bad24f0adjo97",
+          "InstanceType": "m5.large",
+          "Subnets": ["subnet-0b36c1d32eb61d6cb"]
+        }]
+    }

@@ -1,0 +1,3 @@
+# tmpdir used during test runs
+*
+!.gitignore

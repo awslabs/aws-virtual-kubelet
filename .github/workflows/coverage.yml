@@ -1,0 +1,78 @@
+# This GitHub Actions workflow runs jobs in addition to push when an appropriate PR also exists
+name: Coverage
+on:
+  pull_request:
+env:
+  GO_VERSION_CONSTRAINT: '^1.17.2'
+  GOPPROXY: direct  # simulate local / restricted environment by avoiding proxy
+  REPO_URL: ${{ github.event.repository.html_url }}
+  STATUS_URL: ${{ github.event.pull_request.statuses_url }}
+jobs:
+  coverage:
+    name: Test Coverage Checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: ${{ env.GO_VERSION_CONSTRAINT }}
+      - name: Vendor mods
+        run: go mod vendor
+      - name: Collect packages to run tests for
+        run: |
+          echo 'PKGS_TO_TEST<<EOF' >> $GITHUB_ENV
+          # TODO ignore generated files (in `validation.yml` also)
+          echo "$(go list ./... | grep -v mocks | tr '\n' ',')" >> $GITHUB_ENV
+          echo 'EOF' >> $GITHUB_ENV
+      - name: Run tests with race condition checking and test coverage output
+        run: go test -race -coverpkg=${{ env.PKGS_TO_TEST }} -coverprofile=coverage.out -covermode=atomic  ./...
+      - name: Save test coverage data as build artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: Test Coverage Report
+          path: coverage.out
+      - name: Collect total test coverage percentage
+        run: |
+          echo "TOTAL_COVERAGE=\
+          $(go tool cover -func=coverage.out | grep total | grep -Eo '[0-9]+\.[0-9]+')" >> $GITHUB_ENV
+      - name: Annotate check with test coverage percentage
+        run: |
+          curl -s -H 'Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}' ${STATUS_URL}\
+            -d "{\
+              \"state\": \"success\",\
+              \"description\": \"${{ env.TOTAL_COVERAGE }}% test coverage, see Details for full report\",\
+              \"target_url\": \"${REPO_URL}/actions/runs/${{ github.run_id }}\",\
+              \"context\": \"go test\"\
+            }"
+      - name: Get default branch coverage
+        if: ${{ github.event.pull_request.base.ref == github.event.repository.default_branch }}
+        # uncomment the next line (and comment the above) to switch to only checking declining coverage in non-fork repo
+        #        if: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref == github.event.repository.default_branch && github.event.repository.fork == 'false' }}
+        run: |
+          # get coverage for default_branch
+          echo "DEFAULT_BRANCH_COVERAGE=$(curl -s -H 'Authorization: Bearer ${{ secrets.BADGE_GIST_TOKEN }}'\
+            https://gist.githubusercontent.com/jguice/${{ secrets.BADGE_GIST_ID }}/raw/${{ github.event.repository.default_branch }}.json | jq '.message')" >> $GITHUB_ENV
+          # NOTE parse error: Expected string key before... indicates coverage file is missing (can safely be ignored)
+      - name: Check default branch merge base test coverage decline
+        if: ${{ github.event.pull_request.base.ref == github.event.repository.default_branch && env.DEFAULT_BRANCH_COVERAGE }}
+        run: |
+          (( $(echo "${{ env.TOTAL_COVERAGE }} >= ${{ env.DEFAULT_BRANCH_COVERAGE }}" | bc -l) )) \
+            && STATE=success || STATE=failure
+
+          if [[ $STATE == "success" ]]; then
+            curl -s -H 'Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}' ${STATUS_URL}\
+              -d "{\
+                \"state\": \"${STATE}\",\
+                \"description\": \"${{ env.TOTAL_COVERAGE }}% test coverage, see Details for full report\",\
+                \"target_url\": \"${REPO_URL}/actions/runs/${{ github.run_id }}\",\
+                \"context\": \"go test\"\
+              }"
+          else
+            curl -s -H 'Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}' ${STATUS_URL}\
+              -d "{\
+                \"state\": \"${STATE}\",\
+                \"description\": \"${{ env.TOTAL_COVERAGE }}% test coverage < ${{ env.DEFAULT_BRANCH_COVERAGE }}% coverage in ${{ github.event.repository.default_branch }} branch (coverage must not decrease)\",\
+                \"target_url\": \"${REPO_URL}/actions/runs/${{ github.run_id }}\",\
+                \"context\": \"go test\"\
+              }"
+          fi

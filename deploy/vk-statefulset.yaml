@@ -1,0 +1,47 @@
+# This sample, non-production-ready code contains a Virtual Kubelet EC2-based provider and example VM Agent implementation.
+# © 2021 Amazon Web Services, Inc. or its affiliates. All Rights Reserved.
+#
+# This AWS Content is provided subject to the terms of the AWS Customer Agreement
+# available at http://aws.amazon.com/agreement or other written agreement between
+# Customer and either Amazon Web Services, Inc. or Amazon Web Services EMEA SARL or both.
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: virtual-kubelet-set
+  namespace: kube-system
+  labels:
+    app: virtual-kubelet
+spec:
+  serviceName: virtual-kubelet
+  replicas: 3
+  selector:
+    matchLabels:
+      app: virtual-kubelet
+  template:
+    metadata:
+      labels:
+        app: virtual-kubelet
+    spec:
+      serviceAccountName: virtual-kubelet-sa
+      containers:
+        - name: virtual-kubelet
+          image: <image-url>
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+          env:
+            # POD_NAME is a unique per-pod value that is used to uniquely name each virtual-kubelet instance's node
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          volumeMounts:
+            - name: config-volume
+              mountPath: /etc/config
+      volumes:
+        - name: config-volume
+          configMap:
+            # Provide the name of the ConfigMap containing the files you want
+            # to add to the container
+            name: virtual-kubelet-cfg

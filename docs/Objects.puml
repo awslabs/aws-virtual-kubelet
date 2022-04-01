@@ -1,0 +1,203 @@
+@startuml
+'https:'plantuml.com/class-diagram
+
+' Ec2Manager is responsible for all EC2 operations, but has no knowledge of why it's doing _anything_ (i.e. does not
+'  know anything about VK, Pods, etc.). It only acts as an intermediary between clients and direct AWS API calls
+interface "awsutils" {
+    ' EC2
+    CreateEc2()
+    TerminateEc2()
+    GetInstanceStatusById()
+
+    ' ENI
+    CreateNetworkInterface()
+    DeleteNetworkInterface()
+    GetNetworkInterfaceByTagName()
+
+    ' non-exported internal helper functions
+'    - launchApplication()
+}
+
+' ComputeManager is responsible for fulfilling compute requests.  It may do this by launching a fresh EC2 instance, or
+'  obtaining one from the "warm pool" depending on the default and pod configurations
+interface "ComputeManager" {
+    ' obtains compute by launching an EC2 or requesting one from the warm pool (depending on configuration)
+    ' applies desired tags prior to handing over requested compute
+    ' CreateCompute -> GetCompute (may not be created in the warm pool case)
+    Ec2Instance GetCompute() *Ec2Instance
+
+    ' Calls the ec2 utils create and additionally configures necessary EC2 parameters
+    - createEc2()
+
+}
+
+'interface "NetworkManager" {
+'    ' creates and manages network constructs beyond or independent of compute instances (e.g. ENIs, VPCs, subnets)
+'    ?()
+'}
+
+' WarmPoolManager manages "warm pools" of ready EC2 instances to speed up compute requests during pod (re)launch.
+interface "WarmPoolManager" {
+    NewWarmPool()
+    ' Returns an instance from the appropriate pool, blocking until one is available if needed (client is responsible
+    '  for timeout on context)
+    GetInstance()
+
+    ' Launches goroutine to manage each pool's capacity independently
+    - managePool()
+}
+
+' WarmPool represents a pool of EC2 instance objects, associated configuration, etc.  Since multiple
+'  pools may exist, the manager and pool itself are separate (WarmPoolManager may manage many pools of different type).
+' Upon instantiation, a warm pool will self-fulfill and maintain its capacity by talking to the Ec2Manager and
+'  monitoring the health of individual pool instances (by delegating to both EC2 and VKVMAclient managers)
+' The pool can hand out members and takes care of any necessary prep work to make a member instance suitable for use in
+'  a particular pod
+class WarmPool {
+'    Configuration
+    ' whatever impl we have today is probably fine
+'    Map of Ec2 instances by id?
+
+    ' A maintain() or something function will launch the goroutines that obtain and maintain the desired pool size.
+    ' A parent context from the WarmPool itself will listen for Done and terminate all pool instances on cleanup
+    ' (see http example of multiple server threads for context cleanup details).
+'    ?()
+    ' given a pod, return an instance suitable for use with that pod (i.e. make any adjustments, apply any tags, etc.)
+'    "Ec2Instance" fulfill(corev1.Pod)
+}
+
+' Responsible for initiating and maintaining a connection to the VKVMagent as well as providing individual service
+'  clients for use by other classes.  Can monitor the health of the connection and one or more services, and report
+'  this information to upstream callers for appropriate action.  Also maintains retry and reconnect logic?
+class VKVMAclient {
+}
+
+' Ec2Instance encapsulates an EC2 instance object.  Any operation that would be performed on an individual instance is
+'  managed via this encapsulation (e.g. adding tags, setting instance profile, setting security groups, etc.)
+' An instance has some tag/annotation that denotes if it's part of a warm pool (and which one) so it can be terminated
+'  when needed.
+
+'class Ec2Instance {
+'    UpdateInstanceProfile()
+'
+'    - getPrivateIP()
+'    - updateEc2Tags
+'}
+
+'"Ec2Manager" "1" *-- "many" "Ec2Instance"
+"WarmPoolManager" "1" *-- "many" "WarmPool"
+
+'class ClassParser {
+'    - structure <font color=blue>map</font>[string]<font color=blue>map</font>[string]*Struct
+'    - currentPackageName string
+'    - allInterfaces <font color=blue>map</font>[string]<font color=blue>struct</font>{}
+'    - allStructs <font color=blue>map</font>[string]<font color=blue>struct</font>{}
+'
+'    - structImplementsInterface(st *Struct, inter *Struct)
+'    - parsePackage(node ast.Node)
+'    - parseFileDeclarations(node ast.Decl)
+'    - addMethodToStruct(s *Struct, method *ast.Field)
+'    - getFunction(f *ast.FuncType, name string)
+'    - addFieldToStruct(s *Struct, field *ast.Field)
+'    - addToComposition(s *Struct, fType string)
+'    - addToExtends(s *Struct, fType string)
+'    - getOrCreateStruct(name string)
+'    - getStruct(structName string)
+'    - getFieldType(exp ast.Expr, includePackageName bool)
+'
+'    + Render()
+'
+'}
+
+
+'List <|-- AbstractList
+'Collection <|-- AbstractCollection
+
+'Collection <|- List
+'AbstractCollection <|- AbstractList
+'AbstractList <|-- ArrayList
+
+'class ArrayList {
+'Object[] elementData
+'size()
+'}
+
+'enum TimeUnit {
+'DAYS
+'HOURS
+'MINUTES
+'}
+
+' Provided by virtual-kubelet
+' https:'pkg.go.dev/github.com/virtual-kubelet/virtual-kubelet/node?utm_source=godoc#PodLifecycleHandler
+interface PodLifecycleHandler {
+	' CreatePod takes a Kubernetes Pod and deploys it within the provider.
+	CreatePod(ctx context.Context, pod *corev1.Pod) error
+	' UpdatePod takes a Kubernetes Pod and updates it within the provider.
+	UpdatePod(ctx context.Context, pod *corev1.Pod) error
+	' DeletePod takes a Kubernetes Pod and deletes it from the provider. Once a pod is deleted, the provider is
+	' expected to call the NotifyPods callback with a terminal pod status where all the containers are in a terminal
+	' state, as well as the pod. DeletePod may be called multiple times for the same pod.
+	DeletePod(ctx context.Context, pod *corev1.Pod) error
+	' GetPod retrieves a pod by name from the provider (can be cached).
+	' The Pod returned is expected to be immutable, and may be accessed
+	' concurrently outside of the calling goroutine. Therefore it is recommended
+	' to return a version after DeepCopy.
+	GetPod(ctx context.Context, namespace, name string) (*corev1.Pod, error)
+	' GetPodStatus retrieves the status of a pod by name from the provider.
+	' The PodStatus returned is expected to be immutable, and may be accessed
+	' concurrently outside of the calling goroutine. Therefore it is recommended
+	' to return a version after DeepCopy.
+	GetPodStatus(ctx context.Context, namespace, name string) (*corev1.PodStatus, error)
+	' GetPods retrieves a list of all pods running on the provider (can be cached).
+	' The Pods returned are expected to be immutable, and may be accessed
+	' concurrently outside of the calling goroutine. Therefore it is recommended
+	' to return a version after DeepCopy.
+	GetPods(context.Context) ([]*corev1.Pod, error)
+
+	' initial bootup, commandline flag handling, needs to ensure an ENI exists within the configured VPC/subnet and
+	'  generate an initial node name
+	- boot()
+}
+
+interface PodNotifier {
+	' NotifyPods instructs the notifier to call the passed in function when
+	' the pod status changes. It should be called when a pod's status changes.
+	'
+	' The provided pointer to a Pod is guaranteed to be used in a read-only
+	' fashion. The provided pod's PodStatus should be up to date when
+	' this function is called.
+	'
+	' NotifyPods must not block the caller since it is only used to register the callback.
+	' The callback passed into `NotifyPods` may block when called.
+	NotifyPods(context.Context, func(*corev1.Pod))
+}
+
+' Ec2Provider is responsible for implementing the PodLifecycleHandler functions and is the top-level manager of virtual
+'  kubelet resources
+class Ec2Provider implements PodLifecycleHandler, PodNotifier {
+    ' CreatePod obtains an EC2 instance via ComputeManager, then initiates an agent connect, and finally calls
+    '  launchApplication to launch the desired application
+	CreatePod(ctx context.Context, pod *corev1.Pod) error
+	' UpdatePod applies all requested pod updates by calling ComputeManager or ApplicationManager(?)
+	UpdatePod(ctx context.Context, pod *corev1.Pod) error
+	DeletePod(ctx context.Context, pod *corev1.Pod) error
+	GetPod(ctx context.Context, namespace, name string) (*corev1.Pod, error)
+	GetPodStatus(ctx context.Context, namespace, name string) (*corev1.PodStatus, error)
+	GetPods(context.Context) ([]*corev1.Pod, error)
+	NotifyPods(context.Context, func(*corev1.Pod))
+}
+
+' a MetaPod is a pod in our provider universe, which consists of the typical k8s pod object _and_ supporting entities
+'  such as the EC2 backing the pod, the VKVMAclient connected to the agent, etc.
+'class MetaPod {
+'    corev1.Pod
+'    VKVMAclient
+'    Ec2Instance
+'
+'    ' point here being that goroutine(s) monitoring health status and connectivity need to live with the pod and be
+'    '  able to self-terminate or send messages, etc.
+'    - "someKindOfHealthCheckGoroutines?"
+'}
+
+@enduml

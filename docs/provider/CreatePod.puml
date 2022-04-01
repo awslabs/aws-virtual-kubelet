@@ -1,0 +1,16 @@
+@startuml
+'https://plantuml.com/sequence-diagram
+
+title CreatePod
+VirtualKubelet -> Ec2Provider: CreatePod
+Ec2Provider -> ComputeManager: GetCompute
+ComputeManager --> "WarmPoolManager": Get existing pool instance *if configured* or...
+ComputeManager --> "awsutils": Create and configure EC2 instance
+"awsutils" --> "ec2_utils": Create EC2 instance
+Ec2Provider -> HealthMonitor: NewHealthMonitor (with context)
+HealthMonitor -> "VKVMAclient": Get agent connection (re-boostrapping to return a secure, encrypted channel)
+HealthMonitor -> "VKVMAclient": GetHealthClient, calls Check, then starts Watch goroutine with callback
+Ec2Provider -> Ec2Provider: LaunchApplication
+HealthMonitor -> "VKVMAclient": GetApplicationLifecycleClient, calls Check, then starts Watch goroutine with callback
+
+@enduml

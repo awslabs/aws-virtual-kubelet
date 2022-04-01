@@ -1,0 +1,14 @@
+@startuml
+'https://plantuml.com/sequence-diagram
+
+
+
+newpage WarmPool
+"WarmPoolManager" -> "Ec2Client": Create pool instances
+"WarmPoolManager" -> "Ec2Client": Terminate pool instances
+
+newpage DeletePod
+Ec2Provider -> "AppManager?": DeleteApplication
+Ec2Provider -> ComputeManager: Get Compute
+
+@enduml

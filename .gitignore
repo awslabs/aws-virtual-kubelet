@@ -1,0 +1,14 @@
+# build output
+bin/
+
+# macOS litter
+.DS_Store
+
+# IntelliJ
+.idea/
+
+# test-related
+coverage.out
+test/e2e/generated/
+test/e2e/bin/
+/examples/vkvmagent/vkvmagent

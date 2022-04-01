@@ -1,0 +1,183 @@
+@startuml
+namespace ec2provider {
+    class BootstrapAgent << (S,Aquamarine) >> {
+        + S3Bucket string
+        + S3Key string
+        + GRPCPort int
+        + InitData string
+
+    }
+    interface ComputeManager  {
+        + GetCompute(ctx context.Context, pod *v1.Pod) (string, string, error)
+
+    }
+    class Ec2Info << (S,Aquamarine) >> {
+        + InstanceID string
+        + PrivateIP string
+        + IAMProfile string
+        + SecurityGroups []string
+        + RetryCount int
+
+    }
+    class Ec2Provider << (S,Aquamarine) >> {
+        - rm *manager.ResourceManager
+        - internalIP string
+        - daemonEndpointPort int32
+        - pods *PodCache
+        - startTime time.Time
+        - podNotifier <font color=blue>func</font>(*v1.Pod) 
+        - computeManager *computeManager
+        - podMonitor *PodMonitor
+
+        + NodeName string
+        + EniNode *EniNode
+        + Config ProviderConfig
+
+        - handlePodHealthy(ctx context.Context, pod *v1.Pod, subject string) error
+        - handlePodFailures(ctx context.Context, pod *v1.Pod, failure *MonitorFailure) error
+        - handleEc2Failure(ctx context.Context, pod *v1.Pod, failure *MonitorFailure) error
+        - handleVkvmaFailure(ctx context.Context, pod *v1.Pod, failure *MonitorFailure) error
+        - handleAppFailure(ctx context.Context, pod *v1.Pod, failure *MonitorFailure) 
+        - unmonitorAndUncachePod(ctx context.Context, pod *v1.Pod, podMonitor *PodMonitor) 
+        - monitorAndCachePod(ctx context.Context, pod *v1.Pod) (*PodMonitor, error)
+
+        + RecreatePod(ctx context.Context, pod *v1.Pod) error
+        + PopulateCache(cache *PodCache) 
+        + CreatePod(ctx context.Context, pod *v1.Pod) error
+        + UpdatePod(ctx context.Context, pod *v1.Pod) error
+        + DeletePod(ctx context.Context, pod *v1.Pod) error
+        + GetPod(ctx context.Context, namespace string, name string) (*v1.Pod, error)
+        + GetPodStatus(ctx context.Context, namespace string, name string) (*v1.PodStatus, error)
+        + GetPods(ctx context.Context) ([]*v1.Pod, error)
+        + NotifyPods(ctx context.Context, f <font color=blue>func</font>(*v1.Pod) ) 
+        + ConfigureNode(ctx context.Context, node *v1.Node) 
+        + GetContainerLogs(ctx context.Context, namespace string, podName string, containerName string, opts api.ContainerLogOpts) (io.ReadCloser, error)
+        + RunInContainer(ctx context.Context, namespace string, podName string, containerName string, cmd []string, attach api.AttachIO) error
+        + GetStatsSummary(ctx context.Context) (*statsv1alpha1.Summary, error)
+
+    }
+    class EniNode << (S,Aquamarine) >> {
+        - name string
+        - hostname string
+        - lastTransitionTime time.Time
+
+        + Configure(ctx context.Context, k8sNode *v1.Node) (*v1.Node, error)
+        + Ping(ctx context.Context) error
+        + NotifyNodeStatus(ctx context.Context, cb <font color=blue>func</font>(*v1.Node) ) 
+
+    }
+    class ExtendedConfig << (S,Aquamarine) >> {
+        + KubeConfigPath string
+
+    }
+    class MetaPod << (S,Aquamarine) >> {
+        - pod *v1.Pod
+        - monitor *PodMonitor
+        - notifier <font color=blue>func</font>(*v1.Pod) 
+
+    }
+    class MonitorFailure << (S,Aquamarine) >> {
+        - subject string
+        - monitor string
+        - message string
+
+    }
+    class PodCache << (S,Aquamarine) >> {
+        - pods <font color=blue>map</font>[string]*MetaPod
+        - lock sync.RWMutex
+
+        + GetList() []*MetaPod
+        + GetPodList() []*v1.Pod
+        + Get(key string) *MetaPod
+        + Set(key string, val *MetaPod) 
+        + UpdatePod(key string, pod *v1.Pod) error
+        + Delete(key string) 
+
+    }
+    class PodError << (S,Aquamarine) >> {
+        - errorType PodErrorType
+        - message string
+
+    }
+    class PodMonitor << (S,Aquamarine) >> {
+        - monitoring bool
+        - done <font color=blue>chan</font> bool
+        - pod *v1.Pod
+        - provider *Ec2Provider
+        - ec2Client *awsutils.Client
+        - vkvmaClient *vkvmaclient.VkvmaClient
+        - healthClient v1.HealthClient
+        - failureHandler <font color=blue>func</font>(context.Context, *v1.Pod, *MonitorFailure) error
+        - healthyHandler <font color=blue>func</font>(context.Context, *v1.Pod, string) error
+        - failureCounters <font color=blue>map</font>[string]<font color=blue>map</font>[string]int
+
+        - monitorPodHealth(ctx context.Context, done <font color=blue>chan</font> bool, pod *v1.Pod) 
+        - checkEc2Status(ctx context.Context, subject string) (*checkResult, error)
+        - checkVkvmaStatus(ctx context.Context, subject string) (*checkResult, error)
+        - checkAppStatus(ctx context.Context, subject string) (*checkResult, error)
+        - watchAppStatus(ctx context.Context, subject string) error
+        - processStatus(ctx context.Context, result *checkResult, subject string, pod *v1.Pod) 
+
+        + Start(ctx context.Context) 
+        + Stop(ctx context.Context) 
+        + GetVkvmaClient(ctx context.Context) (*vkvmaclient.VkvmaClient, error)
+
+    }
+    class ProviderConfig << (S,Aquamarine) >> {
+        + Region string
+        + ClusterName string
+        + ManagementSubnet string
+        + NodeName string
+        + VMConfig VMConfig
+        + BootstrapAgent BootstrapAgent
+        + WarmPoolConfig []WarmPoolConfig
+
+    }
+    class State << (S,Aquamarine) >> {
+        + ReadyEC2 []Ec2Info
+        + ProvisioningEC2 []Ec2Info
+        + UnhealthyEC2 []Ec2Info
+
+    }
+    class VMConfig << (S,Aquamarine) >> {
+        + InitialSecurityGroups []string
+        + DefaultAMI string
+        + InitData string
+
+    }
+    class WarmPoolConfig << (S,Aquamarine) >> {
+        + DesiredCount int
+        + IamInstanceProfile string
+        + SecurityGroups []string
+        + KeyPair string
+        + ImageID string
+        + InstanceType string
+        + Subnets []string
+
+    }
+    class checkResult << (S,Aquamarine) >> {
+        - subject string
+        - monitor string
+        - healthy bool
+        - message string
+
+    }
+    class computeManager << (S,Aquamarine) >> {
+        - region string
+        - ec2Client *awsutils.Client
+
+        - createCompute(ctx context.Context, p *Ec2Provider, pod *v1.Pod) (string, string, error)
+        - deleteCompute(ctx context.Context, p *Ec2Provider, pod *v1.Pod) error
+
+        + GetCompute(ctx context.Context, p *Ec2Provider, pod *v1.Pod) (string, string, error)
+        + DeleteCompute(ctx context.Context, p *Ec2Provider, pod *v1.Pod) error
+
+    }
+    class ec2provider.PodErrorType << (T, #FF7700) >>  {
+    }
+}
+"sync.Mutex" *-- "ec2provider.State"
+
+
+"__builtin__.int" #.. "ec2provider.PodErrorType"
+@enduml

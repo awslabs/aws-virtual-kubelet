@@ -1,0 +1,88 @@
+# This sample, non-production-ready code contains a Virtual Kubelet EC2-based provider and example VM Agent implementation.
+# © 2021 Amazon Web Services, Inc. or its affiliates. All Rights Reserved.
+#
+# This AWS Content is provided subject to the terms of the AWS Customer Agreement
+# available at http://aws.amazon.com/agreement or other written agreement between
+# Customer and either Amazon Web Services, Inc. or Amazon Web Services EMEA SARL or both.
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cluster-vk-admin
+  namespace: kube-system
+rules:
+  - verbs:
+      - get
+      - create
+    apiGroups:
+      - ''
+    resources:
+      - nodes
+  - verbs:
+      - patch
+    apiGroups:
+      - ''
+    resources:
+      - nodes/status
+  - verbs:
+      - create
+      - patch
+    apiGroups:
+      - ''
+    resources:
+      - events
+  - verbs:
+      - list
+      - get
+      - watch
+      - update
+      - delete
+      - create
+    apiGroups:
+      - ''
+    resources:
+      - pods
+      - pods/status
+  - verbs:
+      - list
+      - get
+      - watch
+    apiGroups:
+      - ''
+    resources:
+      - services
+      - persistentvolumes
+      - persistentvolumeclaims
+  - verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+    apiGroups:
+      - ''
+    resources:
+      - configmaps
+      - secrets
+  - verbs:
+      - create
+      - get
+      - list
+      - update
+    apiGroups:
+      - coordination.k8s.io
+    resources:
+      - leases
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: virtual-kubelet-sa
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-vk-admin
+subjects:
+  - kind: ServiceAccount
+    name: virtual-kubelet-sa
+    namespace: kube-system

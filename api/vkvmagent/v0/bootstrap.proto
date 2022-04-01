@@ -1,0 +1,43 @@
+/*
+This sample, non-production-ready code contains a Virtual Kubelet EC2-based provider and example VM Agent implementation.
+© 2021 Amazon Web Services, Inc. or its affiliates. All Rights Reserved.
+
+This AWS Content is provided subject to the terms of the AWS Customer Agreement
+available at http://aws.amazon.com/agreement or other written agreement between
+Customer and either Amazon Web Services, Inc. or Amazon Web Services EMEA SARL or both.
+*/
+
+// This file describes the bootstrap API exposed by the VKVMAgent.  This API is used by the VKProvider to establish
+// a secure channel for future communications.
+
+syntax = "proto3";
+
+package vkvmagent.v0;
+
+option go_package = "github.com/aws/aws-virtual-kubelet/api/vkvmagent_v0";
+
+service AgentBootstrap {
+  rpc GetAgentIdentity(GetAgentIdentityRequest) returns (GetAgentIdentityResponse);
+  // The `LaunchAuthenticatedEndpoint` is one shot only, once it completes AgentBootstrap service gets torn down
+  rpc LaunchAuthenticatedEndpoint(LaunchAuthenticatedEndpointRequest) returns (LaunchAuthenticatedEndpointResponse);
+}
+
+message GetAgentIdentityRequest {}
+
+message GetAgentIdentityResponse {
+  EC2InstanceIdentity ec2InstanceIdentity = 1;
+}
+
+message EC2InstanceIdentity {
+  bytes instanceDocument = 1;
+  bytes pkcs7Signature = 2;
+  bytes signingCertificate = 3;
+}
+
+message LaunchAuthenticatedEndpointRequest {
+  bytes pemCertificateChain = 1;
+  bytes pemPrivateKey = 2;
+}
+
+// Errors to be passed via the gRPC built in error handling mechanism
+message LaunchAuthenticatedEndpointResponse {}
