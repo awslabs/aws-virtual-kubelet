@@ -16,32 +16,20 @@ import (
 	"os"
 	"time"
 
-	"github.com/aws/aws-virtual-kubelet/internal/vkvmaclient"
-
-	"github.com/aws/aws-virtual-kubelet/internal/health"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"github.com/aws/aws-virtual-kubelet/internal/config"
-
-	vkvmagent_v0 "github.com/aws/aws-virtual-kubelet/proto/vkvmagent/v0"
-
+	"github.com/aws/aws-virtual-kubelet/internal/health"
 	"github.com/aws/aws-virtual-kubelet/internal/metrics"
-
 	"github.com/aws/aws-virtual-kubelet/internal/utils"
-
+	"github.com/aws/aws-virtual-kubelet/internal/vkvmaclient"
+	vkvmagent_v0 "github.com/aws/aws-virtual-kubelet/proto/vkvmagent/v0"
 	"github.com/virtual-kubelet/node-cli/manager"
-
-	"k8s.io/klog/v2"
-
 	"github.com/virtual-kubelet/node-cli/provider"
-
 	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
-
 	"github.com/virtual-kubelet/virtual-kubelet/node/api"
 	"github.com/virtual-kubelet/virtual-kubelet/node/api/statsv1alpha1"
-
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/klog/v2"
 )
 
 // Ec2Provider implements PodLifecycleHandler which defines the interface used by the PodController to react to new and
@@ -97,7 +85,7 @@ func NewEc2Provider(ctx context.Context, cfg provider.InitConfig, extCfg config.
 		rm:         cfg.ResourceManager,
 	}
 
-	p.EniNode, err = GetOrCreateEniNode(ctx, p.Config.Region, p.Config.ClusterName, p.Config.ManagementSubnet)
+	p.EniNode, err = GetOrCreateEniNode(ctx, p.Config.HttpClientTimeoutSeconds, p.Config.ClusterName, p.Config.ManagementSubnet)
 	if err != nil {
 		klog.Errorf(
 			"Unable to get or create node (ENI).  Are the AWS credentials expired/invalid? %v",
@@ -116,7 +104,7 @@ func NewEc2Provider(ctx context.Context, cfg provider.InitConfig, extCfg config.
 
 	//p.warmPool, err = NewV2WarmPool(ctx, &p)
 
-	p.computeManager, err = NewComputeManager(ctx, p.Config.Region)
+	p.computeManager, err = NewComputeManager(ctx, p.Config.HttpClientTimeoutSeconds)
 	if err != nil {
 		panic("handle compute manager instantiation error")
 	}

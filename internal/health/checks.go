@@ -13,6 +13,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/aws/aws-virtual-kubelet/internal/config"
 	"io"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -157,8 +158,8 @@ func checkEc2Status(ctx context.Context, m *Monitor) *checkResult {
 	pod := m.Resource.(*corev1.Pod)
 
 	instanceID := pod.Annotations["compute.amazonaws.com/instance-id"]
-
-	ec2Client, err := awsutils.NewEc2Client("us-west-2")
+	//TODO juicejg@ ec2Client will be removed as DescribeInstanceStatus is not needed
+	ec2Client, err := awsutils.NewEc2Client(config.ProviderConfig{}.HttpClientTimeoutSeconds)
 	if err != nil {
 		return NewCheckResult(m, true, err.Error(), nil)
 	}

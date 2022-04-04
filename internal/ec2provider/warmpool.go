@@ -71,7 +71,7 @@ type WarmPoolManager struct {
 func NewWarmPool(ctx context.Context, provider *Ec2Provider, config []config2.WarmPoolConfig) (*WarmPoolManager, error) {
 	klog.Infof("Creating Warm Pool Manager with config '%+v'", config)
 
-	ec2Client, err := awsutils.NewEc2Client(provider.Config.Region)
+	ec2Client, err := awsutils.NewEc2Client(provider.Config.HttpClientTimeoutSeconds)
 	if err != nil {
 		klog.Errorf("Can't create Ec2 client in Warm Pool init: %v", err)
 		return nil, err
@@ -216,7 +216,7 @@ func (wpm *WarmPoolManager) CreateWarmEC2(ctx context.Context, wpConfig config2.
 
 	finalUserData, err := awsutils.GenerateVKVMUserData(
 		ctx,
-		wpm.provider.Config.Region,
+		wpm.provider.Config.HttpClientTimeoutSeconds,
 		wpm.provider.Config.BootstrapAgent.S3Bucket,
 		wpm.provider.Config.BootstrapAgent.S3Key,
 		wpm.provider.Config.VMConfig.InitData,
@@ -400,7 +400,7 @@ func (wpm *WarmPoolManager) GetWarmPoolInstanceIfExist(ctx context.Context) (ins
 //TerminateInstance provides a way to terminate an EC2 instance.
 // To be explicitly used for Warmpool Management and prefer DeletePod once a Pod is set.
 func (wpm *WarmPoolManager) TerminateInstance(ctx context.Context, instanceID string) (resp string, err error) {
-	resp, err = awsutils.TerminateEC2(ctx, instanceID, wpm.provider.Config.Region)
+	resp, err = awsutils.TerminateEC2(ctx, instanceID, wpm.provider.Config.HttpClientTimeoutSeconds)
 	return resp, err
 }
 

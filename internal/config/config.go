@@ -33,13 +33,14 @@ const (
 
 // ProviderConfig represents the contents of the provider configuration file.
 type ProviderConfig struct {
-	Region           string
-	ClusterName      string
-	ManagementSubnet string
-	NodeName         string
-	VMConfig         VMConfig
-	BootstrapAgent   BootstrapAgent
-	WarmPoolConfig   []WarmPoolConfig
+	Region                   string
+	ClusterName              string
+	ManagementSubnet         string
+	NodeName                 string
+	VMConfig                 VMConfig
+	BootstrapAgent           BootstrapAgent
+	WarmPoolConfig           []WarmPoolConfig
+	HttpClientTimeoutSeconds int `default:"30"`
 }
 
 // VMConfig defines Default configurations for EC2 Instances if not otherwise specified.

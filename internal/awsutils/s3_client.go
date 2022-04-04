@@ -12,6 +12,8 @@ package awsutils
 import (
 	"context"
 	"errors"
+	"github.com/aws/aws-sdk-go-v2/aws/transport/http"
+	"time"
 
 	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -26,9 +28,10 @@ type S3Client struct {
 }
 
 // NewS3Client Generates a new S3 Client to be utilized across the program.
-func NewS3Client(region string) (*S3Client, error) {
+func NewS3Client(clientTimeoutSeconds int) (*S3Client, error) {
 	// Initialize client session configuration.
-	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion(region))
+	httpClient := http.NewBuildableClient().WithTimeout(time.Second * time.Duration(clientTimeoutSeconds))
+	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithHTTPClient(httpClient))
 	if err != nil {
 		klog.Fatalf("unable to load SDK config, %v", err)
 		return nil, errors.New("unable to find load SDK config : ")
