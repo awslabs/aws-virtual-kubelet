@@ -15,7 +15,7 @@ import (
 	"sync"
 	"time"
 
-	config2 "github.com/aws/aws-virtual-kubelet/internal/config"
+	"github.com/aws/aws-virtual-kubelet/internal/config"
 
 	"github.com/aws/aws-virtual-kubelet/internal/awsutils"
 
@@ -63,22 +63,25 @@ var (
 )
 
 type WarmPoolManager struct {
-	config    []config2.WarmPoolConfig
+	config    []config.WarmPoolConfig
 	provider  *Ec2Provider
 	ec2Client *awsutils.Client
 }
 
-func NewWarmPool(ctx context.Context, provider *Ec2Provider, config []config2.WarmPoolConfig) (*WarmPoolManager, error) {
-	klog.Infof("Creating Warm Pool Manager with config '%+v'", config)
+func NewWarmPool(ctx context.Context, provider *Ec2Provider) (*WarmPoolManager, error) {
+	cfg := config.Config()
+	region := cfg.Region
 
-	ec2Client, err := awsutils.NewEc2Client(provider.Config.Region)
+	klog.Infof("Creating Warm Pool Manager with config '%+v'", cfg.WarmPoolConfig)
+
+	ec2Client, err := awsutils.NewEc2Client(region)
 	if err != nil {
 		klog.Errorf("Can't create Ec2 client in Warm Pool init: %v", err)
 		return nil, err
 	}
 
 	return &WarmPoolManager{
-		config:    config,
+		config:    cfg.WarmPoolConfig,
 		provider:  provider,
 		ec2Client: ec2Client,
 	}, nil
@@ -140,6 +143,8 @@ func (wpm *WarmPoolManager) InitialWarmPoolCreation() {
 }
 
 func (wpm *WarmPoolManager) populateEC2Tags(reason string, pod corev1.Pod) (tagSpecification []types.TagSpecification) {
+	cfg := config.Config()
+	clusterName := cfg.ClusterName
 
 	var tagsInput = []types.TagSpecification{{
 		ResourceType: "instance",
@@ -178,7 +183,7 @@ func (wpm *WarmPoolManager) populateEC2Tags(reason string, pod corev1.Pod) (tagS
 		},
 		types.Tag{
 			Key:   aws.String("aws-virtual-kubelet/WarmpoolClusterName"),
-			Value: aws.String(wpm.provider.Config.ClusterName),
+			Value: aws.String(clusterName),
 		},
 		types.Tag{
 			Key:   aws.String("aws-virtual-kubelet/WarmpoolStatus"),
@@ -188,7 +193,7 @@ func (wpm *WarmPoolManager) populateEC2Tags(reason string, pod corev1.Pod) (tagS
 	return tagsInput
 }
 
-func (wpm *WarmPoolManager) createWarmEC2(ctx context.Context, wpCfg config2.WarmPoolConfig) error {
+func (wpm *WarmPoolManager) createWarmEC2(ctx context.Context, wpCfg config.WarmPoolConfig) error {
 	klog.Info("Creating Warmpool EC2 Instance")
 	tags := wpm.populateEC2Tags(initialSetup, corev1.Pod{})
 	instance, privateIP, instanceProfile, securityGroups, err := wpm.CreateWarmEC2(ctx, wpCfg, tags)
@@ -212,15 +217,16 @@ func (wpm *WarmPoolManager) updateEC2Tags(ctx context.Context, instanceID string
 }
 
 // CreateWarmEC2 Calls the EC2 RunInstancesAPI with values consistent for a WarmPool using wp and tags as input.
-func (wpm *WarmPoolManager) CreateWarmEC2(ctx context.Context, wpConfig config2.WarmPoolConfig, tags []types.TagSpecification) (instanceID string, privateIP string, IAMProfileName string, SecurityGroups []string, err error) {
+func (wpm *WarmPoolManager) CreateWarmEC2(ctx context.Context, wpConfig config.WarmPoolConfig, tags []types.TagSpecification) (instanceID string, privateIP string, IAMProfileName string, SecurityGroups []string, err error) {
+	cfg := config.Config()
 
 	finalUserData, err := awsutils.GenerateVKVMUserData(
 		ctx,
-		wpm.provider.Config.Region,
-		wpm.provider.Config.BootstrapAgent.S3Bucket,
-		wpm.provider.Config.BootstrapAgent.S3Key,
-		wpm.provider.Config.VMConfig.InitData,
-		wpm.provider.Config.BootstrapAgent.InitData,
+		cfg.Region,
+		cfg.BootstrapAgent.S3Bucket,
+		cfg.BootstrapAgent.S3Key,
+		cfg.VMConfig.InitData,
+		cfg.BootstrapAgent.InitData,
 	)
 	if err != nil {
 		klog.Errorf("error while creating userdata : %v", err)
@@ -276,7 +282,7 @@ func (wpm *WarmPoolManager) CreateWarmEC2(ctx context.Context, wpConfig config2.
 }
 
 // CheckWarmPoolDepth Determines the health of the existing WarmPool and then takes appropriate action
-func (wpm *WarmPoolManager) CheckWarmPoolDepth(ctx context.Context, wpc config2.WarmPoolConfig) {
+func (wpm *WarmPoolManager) CheckWarmPoolDepth(ctx context.Context, wpc config.WarmPoolConfig) {
 	klog.Info("Checking WarmPool Depth")
 	VKState.Lock()
 	defer VKState.Unlock()
@@ -313,6 +319,9 @@ func (wpm *WarmPoolManager) SetNodeName(node string) {
 }
 
 func (wpm *WarmPoolManager) checkEC2TagsForState(ctx context.Context, input *ec2.DescribeInstancesInput) {
+	cfg := config.Config()
+	clusterName := cfg.ClusterName
+
 	VKState = State{}
 	// Initialize the state maps.
 	VKState.ReadyEC2 = make(map[string]Ec2Info)
@@ -324,7 +333,7 @@ func (wpm *WarmPoolManager) checkEC2TagsForState(ctx context.Context, input *ec2
 	first := true
 	// Forcibly filter by NodeName to reduce noise
 	input.Filters = append(input.Filters, types.Filter{Name: aws.String("tag:aws-virtual-kubelet/WarmpoolNodeName"), Values: []string{nodeName}})
-	input.Filters = append(input.Filters, types.Filter{Name: aws.String("tag:aws-virtual-kubelet/WarmpoolClusterName"), Values: []string{wpm.provider.Config.ClusterName}})
+	input.Filters = append(input.Filters, types.Filter{Name: aws.String("tag:aws-virtual-kubelet/WarmpoolClusterName"), Values: []string{clusterName}})
 	input.Filters = append(input.Filters, types.Filter{Name: aws.String("instance-state-name"), Values: []string{"running", "pending"}})
 	var resp = ec2.DescribeInstancesOutput{}
 	for (resp.NextToken != nil) || first {
@@ -400,7 +409,10 @@ func (wpm *WarmPoolManager) GetWarmPoolInstanceIfExist(ctx context.Context) (ins
 //TerminateInstance provides a way to terminate an EC2 instance.
 // To be explicitly used for Warmpool Management and prefer DeletePod once a Pod is set.
 func (wpm *WarmPoolManager) TerminateInstance(ctx context.Context, instanceID string) (resp string, err error) {
-	resp, err = awsutils.TerminateEC2(ctx, instanceID, wpm.provider.Config.Region)
+	cfg := config.Config()
+	region := cfg.Region
+
+	resp, err = awsutils.TerminateEC2(ctx, instanceID, region)
 	return resp, err
 }
 

@@ -1,0 +1,34 @@
+{
+  "ManagementSubnet": "subnet-badf005ba117ab1e5",
+  "ClusterName": "aws-virtual-kubelet",
+  "Region": "us-west-2",
+  "VMConfig": {
+    "DefaultAMI": "ami-badf005ba117ab1e5",
+    "InitData": ""
+  },
+  "BootstrapAgent": {
+    "S3Bucket": "some-bukkit",
+    "S3Key": "agent.tar.gz",
+    "GRPCPort": 8200,
+    "InitData": ""
+  },
+  "HealthConfig": {
+    "UnhealthyThresholdCount": 3,
+    "UnhealthyMaxCount": 20,
+    "HealthCheckIntervalSeconds": 10
+  },
+  "VKVMAgentConnectionConfig": {
+    "TimeoutSeconds": 10,
+    "MinConnectTimeoutSeconds": 1,
+    "Backoff": {
+      "BaseDelaySeconds": 1,
+      "Multiplier": 1.5,
+      "Jitter": 0.5,
+      "MaxDelaySeconds": 300
+    },
+    "Keepalive": {
+      "TimeSeconds": 10,
+      "TimeoutSeconds": 30
+    }
+  }
+}

@@ -9,18 +9,6 @@ Customer and either Amazon Web Services, Inc. or Amazon Web Services EMEA SARL o
 
 package config
 
-import (
-	"encoding/json"
-	"io/ioutil"
-	"os"
-	"reflect"
-
-	"github.com/creasty/defaults"
-	"github.com/pkg/errors"
-	"github.com/virtual-kubelet/node-cli/provider"
-	"k8s.io/klog"
-)
-
 // Ec2Provider configuration defaults.
 const (
 	DefaultOperatingSystem = "Linux"
@@ -31,113 +19,81 @@ const (
 	DefaultConfigLocation  = "/etc/config/config.json"
 )
 
-// ProviderConfig represents the contents of the provider configuration file.
-type ProviderConfig struct {
-	Region           string
-	ClusterName      string
-	ManagementSubnet string
-	NodeName         string
-	VMConfig         VMConfig
-	BootstrapAgent   BootstrapAgent
-	WarmPoolConfig   []WarmPoolConfig
-}
-
-// VMConfig defines Default configurations for EC2 Instances if not otherwise specified.
-type VMConfig struct {
-	DefaultAMI string
-	InitData   string
-}
-
-// BootstrapAgent defines where to locate the Bootstrap Agent information during VM startup
-type BootstrapAgent struct {
-	S3Bucket string
-	S3Key    string
-	GRPCPort int
-	InitData string
-}
-
-// WarmPoolConfig represents the contents of WarmPool feature configuration, which is optional.
-type WarmPoolConfig struct {
-	DesiredCount       int      `json:"DesiredCount,omitempty,string"`
-	IamInstanceProfile string   `json:"IamInstanceProfile,omitempty"`
-	SecurityGroups     []string `json:"Securitygroups,omitempty,string"`
-	KeyPair            string   `json:"KeyPair,omitempty"`
-	ImageID            string   `json:"ImageID,omitempty"`
-	InstanceType       string   `json:"InstanceType,omitempty"`
-	Subnets            []string `json:"Subnets,omitempty,string"`
-}
-
 // ExtendedConfig contains additional configuration collected from CLI flags that is not part of VK's InitConfig
 type ExtendedConfig struct {
 	KubeConfigPath string
 }
 
-// LoadInitParams loads a ProviderConfig with required values
-func LoadInitParams(initCfg provider.InitConfig) (ProviderConfig, error) {
-	var err error
-	var config ProviderConfig
+// ProviderConfig represents the entire configuration structure
+type ProviderConfig struct {
+	// AWS Region to launch and interact with resources in
+	Region string `default:"us-west-2"`
+	// Name of the cluster used to tag ENIs (nodes)
+	ClusterName string `default:"aws-virtual-kubelet"`
+	// Subnet used for... TODO describe how this is used
+	ManagementSubnet string
 
-	fileLocation := initCfg.ConfigPath
-
-	if fileLocation == "" {
-		fileLocation = DefaultConfigLocation
-	}
-
-	configFile, err := os.Open(fileLocation)
-	if err != nil {
-		klog.Error("opening Config file: ", err.Error())
-		return config, err
-	}
-
-	jsonParser := json.NewDecoder(configFile)
-	if err = jsonParser.Decode(&config); err != nil {
-		klog.Error("parsing Config file: ", err.Error())
-		return config, err
-	}
-
-	// NOTE this parsing approach prevents us from validating specific fields in "subconfigs" (e.g. a field
-	//  in WarmPoolConfig can't be marked optional while another in that config is marked required)
-	// Check if mandatory fields are missing
-	// Replace Reflect implementation of validation with specific field checks if performance is not satisfactory.
-	v := reflect.ValueOf(config)
-	optionalFields := map[string]bool{
-		"NodeName":        true,
-		"VmInit":          true,
-		"BootstrapAgent":  true,
-		"BootstrapBucket": true,
-		"BoostrapKey":     true,
-		"WarmPoolConfig":  true,
-		"HealthConfig":    true,
-	}
-	for i := 0; i < v.NumField(); i++ {
-		fieldName := v.Type().Field(i).Name
-		fieldValue := v.Field(i).Interface()
-		if (fieldValue == "") && !optionalFields[fieldName] {
-			klog.Errorf("LoadInitParams errored on %s ", fieldName)
-			return config, errors.Errorf("mandatory field  %s not defined in Virtual Kubelet Config", fieldValue)
-		}
-	}
-	return config, nil
+	VMConfig                  VMConfig       `default:"{}"`
+	BootstrapAgent            BootstrapAgent `default:"{}"`
+	HealthConfig              HealthConfig
+	VKVMAgentConnectionConfig VkvmaConfig
+	WarmPoolConfig            []WarmPoolConfig `default:"-"`
 }
 
-// --------------------------------------------------------------------------------
-// NOTE New Config implementation below (is replacing existing ProviderConfig)
+// VMConfig defines Default configurations for EC2 Instances if not otherwise specified.
+type VMConfig struct {
+	// Default AMI to launch pods on (can be overridden in pod spec)
+	DefaultAMI string
+	// Base64 EC2 user data for... TODO describe how this is used
+	InitData string
+}
+
+// BootstrapAgent defines where to locate the Bootstrap Agent information during VM startup
+type BootstrapAgent struct {
+	// S3 Bucket name to download VKVMAgent binary from
+	S3Bucket string
+	// S3 Bucket key pointing to VKVMAgent binary
+	S3Key string
+	// GRPC (VKVMAgent) port to connect to
+	GRPCPort int `default:"8200"`
+	// Base64 EC2 user data for... TODO describe how this is used
+	InitData string
+}
+
+// WarmPoolConfig represents the contents of WarmPool feature configuration, which is optional.
+type WarmPoolConfig struct {
+	// Desired number of warm pool instances to maintain
+	DesiredCount int `default:"10"`
+	// Instance profile to associate with warm pool instances
+	IamInstanceProfile string
+	// Security groups to set on warm pool instances
+	SecurityGroups []string
+	// Key pair used to launch warm pool instances
+	KeyPair string
+	// AMI ID to use for creation of warm pool instances
+	ImageID string
+	// Instance type to use for warm pool instances
+	InstanceType string
+	// Subnets to launch warm pool instances in
+	Subnets []string
+}
 
 // HealthConfig contains podMonitor health monitoring settings and defaults
 type HealthConfig struct {
-	// consecutive failure results required before reporting unhealthy status back to provider
+	// Consecutive failure results required before reporting unhealthy status back to provider
 	UnhealthyThresholdCount int `default:"5"`
 	// [UNUSED] maximum failure results before forcing provider to take action
 	UnhealthyMaxCount int `default:"30"`
-	// frequency to conduct "active" (polling) health checks at
+	// Frequency to conduct "active" (polling) health checks at
 	HealthCheckIntervalSeconds int `default:"60"`
 }
 
 // VkvmaConfig contains VKVMAgent connection and related settings
 type VkvmaConfig struct {
+	Port int `default:"8200"`
 	// NOTE ⚠️  Initial connection timeout is independent from reconnect params below (set values accordingly)
 	TimeoutSeconds int `default:"300"`
-	// minimum time to give a connection to complete
+	// Minimum time to give a connection to complete
 	MinConnectTimeoutSeconds   int `default:"60"`
 	HealthCheckIntervalSeconds int `default:"60"`
 	// See https://github.com/grpc/grpc/blob/master/doc/connection-backoff.md for backoff implementation details
@@ -164,50 +120,10 @@ type VkvmaConfig struct {
 	}
 }
 
-// providerConfig represents the entire configuration structure
-type providerConfig struct {
-	// NOTE var names *must* match `config.json` key names
-	HealthConfig              HealthConfig
-	VKVMAgentConnectionConfig VkvmaConfig
-}
-
-// Loader captures input params needed to load configuration
-type Loader struct {
-	ConfigPath string
-}
-
-var config *providerConfig
-
-// LoadConfig is meant to be called _once_ during app init to load the configuration and handle any errors.
-// Config() should be use after to obtain any configuration elements
-func (cl Loader) LoadConfig() error {
-	config = &providerConfig{}
-
-	if err := defaults.Set(config); err != nil {
-		klog.Errorf("Error settings default config values: %v", err)
-		return err
-	}
-
-	if cl.ConfigPath == "" {
-		cl.ConfigPath = DefaultConfigLocation
-	}
-
-	configFile, err := ioutil.ReadFile(cl.ConfigPath)
-	if err != nil {
-		klog.Errorf("Error reading Config file: %v", err)
-		return err
-	}
-
-	// TODO(guicejg): detect missing configuration and notify (or fail if non-optional)
-	if err := json.Unmarshal(configFile, config); err != nil {
-		klog.Errorf("Error parsing Config file: %v", err)
-		return err
-	}
-
-	return nil
-}
+// package-level config "singleton" for global static access (provided via Config function below)
+var config *ProviderConfig
 
 // Config provides an exported accessor allowing callers to retrieve configuration
-func Config() *providerConfig {
+func Config() *ProviderConfig {
 	return config
 }

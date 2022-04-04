@@ -53,7 +53,6 @@ import (
 type Ec2Provider struct {
 	NodeName string
 	EniNode  *EniNode
-	Config   config.ProviderConfig
 
 	rm                 *manager.ResourceManager
 	internalIP         string
@@ -65,8 +64,6 @@ type Ec2Provider struct {
 	podMonitor         *health.PodMonitor
 	checkHandler       *health.CheckHandler
 	warmPool           *WarmPoolManager
-	configPath         string
-	//warmPool *V2WarmPoolManager
 }
 
 func NewEc2Provider(ctx context.Context, cfg provider.InitConfig, extCfg config.ExtendedConfig) (*Ec2Provider, error) {
@@ -77,27 +74,18 @@ func NewEc2Provider(ctx context.Context, cfg provider.InitConfig, extCfg config.
 
 	klog.Infof("Creating EC2 Provider with initial config '%+v'", cfg)
 
-	conf, err := config.LoadInitParams(cfg)
-	if err != nil {
-		klog.Errorf("can't load provider config '%v': %v", cfg.ConfigPath, err)
-		return nil, err
-	}
+	var configLoader config.Loader = &config.FileLoader{ConfigFilePath: cfg.ConfigPath}
 
-	// NOTE This config loader is replacing the `LoadInitParams` version above
-	//  https://martinfowler.com/bliki/StranglerFigApplication.html
-	err = config.Loader{ConfigPath: cfg.ConfigPath}.LoadConfig()
+	err := config.InitConfig(configLoader)
 	if err != nil {
-		klog.Errorf("Error loading configuration from %v: %v", cfg.ConfigPath, err)
-		return nil, err
+		klog.ErrorS(err, "Can't process config")
 	}
 
 	p := Ec2Provider{
-		Config:     conf,
-		configPath: cfg.ConfigPath,
-		rm:         cfg.ResourceManager,
+		rm: cfg.ResourceManager,
 	}
 
-	p.EniNode, err = GetOrCreateEniNode(ctx, p.Config.Region, p.Config.ClusterName, p.Config.ManagementSubnet)
+	p.EniNode, err = GetOrCreateEniNode(ctx)
 	if err != nil {
 		klog.Errorf(
 			"Unable to get or create node (ENI).  Are the AWS credentials expired/invalid? %v",
@@ -108,7 +96,7 @@ func NewEc2Provider(ctx context.Context, cfg provider.InitConfig, extCfg config.
 	// set the provider local nodeName property
 	p.NodeName = p.EniNode.name
 
-	p.warmPool, err = NewWarmPool(ctx, &p, p.Config.WarmPoolConfig)
+	p.warmPool, err = NewWarmPool(ctx, &p)
 	if err != nil {
 		panic("handle warm pool instantiation error")
 	}
@@ -116,7 +104,7 @@ func NewEc2Provider(ctx context.Context, cfg provider.InitConfig, extCfg config.
 
 	//p.warmPool, err = NewV2WarmPool(ctx, &p)
 
-	p.computeManager, err = NewComputeManager(ctx, p.Config.Region)
+	p.computeManager, err = NewComputeManager(ctx)
 	if err != nil {
 		panic("handle compute manager instantiation error")
 	}
@@ -316,10 +304,12 @@ func (p *Ec2Provider) GetStatsSummary(ctx context.Context) (*statsv1alpha1.Summa
 func (p *Ec2Provider) launchApplication(
 	ctx context.Context, pod *corev1.Pod) (*vkvmagent_v0.LaunchApplicationResponse, error) {
 
+	cfg := config.Config()
+
 	var launchAppResp *vkvmagent_v0.LaunchApplicationResponse
 
 	// TODO(guicejg): 🚨 Get port from config
-	vkvmaClient := vkvmaclient.NewVkvmaClient(pod.Status.PodIP, 8200)
+	vkvmaClient := vkvmaclient.NewVkvmaClient(pod.Status.PodIP, cfg.VKVMAgentConnectionConfig.Port)
 
 	appClient, err := vkvmaClient.GetApplicationLifecycleClient(ctx)
 	if err != nil {
@@ -417,11 +407,13 @@ func (p *Ec2Provider) stopPodMonitor(ctx context.Context, metaPod *MetaPod) erro
 }
 
 func (p *Ec2Provider) terminateApp(ctx context.Context, metaPod *MetaPod) error {
+	cfg := config.Config()
+
 	var termAppResp *vkvmagent_v0.TerminateApplicationResponse
 
 	pod := metaPod.pod
 
-	vkvmaClient := vkvmaclient.NewVkvmaClient(pod.Status.PodIP, 8200)
+	vkvmaClient := vkvmaclient.NewVkvmaClient(pod.Status.PodIP, cfg.VKVMAgentConnectionConfig.Port)
 
 	appClient, err := vkvmaClient.GetApplicationLifecycleClient(ctx)
 	if err != nil {
