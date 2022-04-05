@@ -15,6 +15,8 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/aws/aws-virtual-kubelet/internal/config"
+
 	"github.com/aws/aws-sdk-go-v2/aws"
 
 	"github.com/aws/aws-virtual-kubelet/internal/vkvmaclient"
@@ -35,9 +37,11 @@ func CheckAppHealthOnce(ctx context.Context, pod *corev1.Pod) *checkResult {
 }
 
 func checkAppHealth(ctx context.Context, m *Monitor) *checkResult {
+	cfg := config.Config()
+
 	pod := m.Resource.(*corev1.Pod)
 
-	vkvmaClient := vkvmaclient.NewVkvmaClient(pod.Status.PodIP, 8200)
+	vkvmaClient := vkvmaclient.NewVkvmaClient(pod.Status.PodIP, cfg.VKVMAgentConnectionConfig.Port)
 
 	appClient, err := vkvmaClient.GetApplicationLifecycleClient(context.Background())
 	if err != nil {
@@ -62,13 +66,15 @@ func checkAppHealth(ctx context.Context, m *Monitor) *checkResult {
 }
 
 func watchAppHealth(ctx context.Context, m *Monitor, ch *CheckHandler) error {
+	cfg := config.Config()
+
 	m.watcher.isWatching = true
 
 	pod := m.Resource.(*corev1.Pod)
 
 	klog.InfoS("Watching application health for pod", "pod", klog.KObj(pod))
 
-	vkvmaClient := vkvmaclient.NewVkvmaClient(pod.Status.PodIP, 8200)
+	vkvmaClient := vkvmaclient.NewVkvmaClient(pod.Status.PodIP, cfg.VKVMAgentConnectionConfig.Port)
 
 	appClient, err := vkvmaClient.GetApplicationLifecycleClient(context.Background())
 	if err != nil {

@@ -37,7 +37,12 @@ type EniNode struct {
 	lastTransitionTime time.Time
 }
 
-func GetOrCreateEniNode(ctx context.Context, region string, clusterName string, subnetId string) (*EniNode, error) {
+func GetOrCreateEniNode(ctx context.Context) (*EniNode, error) {
+	cfg := config.Config()
+	region := cfg.Region
+	clusterName := cfg.ClusterName
+	subnetId := cfg.ManagementSubnet
+
 	ec2Client, err := awsutils.NewEc2Client(region)
 	if err != nil {
 		return nil, err
