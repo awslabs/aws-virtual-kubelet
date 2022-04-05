@@ -8,7 +8,7 @@
 export GOPROXY=direct
 
 # NOTE this is typically the AWS Account number (set the environment variable before running `make` to override
-REGISTRY_ID ?= 271061459139
+REGISTRY_ID ?= 123456789012
 IMAGE_NAME ?= aws-virtual-kubelet
 REGION ?= us-west-2
 
@@ -93,7 +93,7 @@ test: $(VKVMA_MOCKS_FILES) $(GRPC_MOCKS_FILES)
 
 
 IMAGE?=$(REGISTRY_ID).dkr.ecr.$(REGION).amazonaws.com/$(IMAGE_NAME)
-TAG?=$(shell git describe --tags --always --dirty="-dev-ny")
+TAG?=$(shell git describe --tags --always --dirty="-dev")
 
 .PHONY: docker
 docker: 
