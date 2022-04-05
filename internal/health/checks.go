@@ -164,7 +164,7 @@ func checkEc2Status(ctx context.Context, m *Monitor) *checkResult {
 
 	instanceID := pod.Annotations["compute.amazonaws.com/instance-id"]
 
-	ec2Client, err := awsutils.NewEc2Client("us-west-2")
+	ec2Client, err := awsutils.NewEc2Client(config.ProviderConfig{}.HealthCheckIntervalSeconds)
 	if err != nil {
 		return NewCheckResult(m, true, err.Error(), nil)
 	}

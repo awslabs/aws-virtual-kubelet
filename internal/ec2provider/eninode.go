@@ -39,11 +39,11 @@ type EniNode struct {
 
 func GetOrCreateEniNode(ctx context.Context) (*EniNode, error) {
 	cfg := config.Config()
-	region := cfg.Region
+	clientTimeoutSeconds := cfg.HealthCheckIntervalSeconds
 	clusterName := cfg.ClusterName
 	subnetId := cfg.ManagementSubnet
 
-	ec2Client, err := awsutils.NewEc2Client(region)
+	ec2Client, err := awsutils.NewEc2Client(clientTimeoutSeconds)
 	if err != nil {
 		return nil, err
 	}
