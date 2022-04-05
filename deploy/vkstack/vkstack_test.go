@@ -18,7 +18,7 @@ package main
 // )
 
 // example tests. To run these tests, uncomment this file along with the
-// example resource in pipeline-infra_test.go
+// example resource in vkstack_test.go
 // func TestPipelineInfraStack(t *testing.T) {
 // 	// GIVEN
 // 	app := awscdk.NewApp(nil)

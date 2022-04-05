@@ -1,4 +1,4 @@
-module pipeline-infra
+module vkstack
 
 go 1.16
 

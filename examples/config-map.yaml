@@ -9,7 +9,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: virtual-kubelet-cfg
-  namespace: kube-system
+  namespace: virtual-kubelet
 data:
   # property-like keys; each key maps to a simple value
   # Required Values for Virtual Kubelet

@@ -11,7 +11,6 @@ package main
 
 import (
 	"github.com/aws/aws-cdk-go/awscdk/v2/awsec2"
-
 	"github.com/aws/aws-cdk-go/awscdk/v2/awsecr"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awseks"
 
@@ -42,25 +41,47 @@ func NewVKStack(scope constructs.Construct, id string, props *VKStackProps) awsc
 		ClusterName: jsii.String("virtual-kubelet-cluster"), // Overrides the auto-generated name
 	})
 
+	// Virtual Kubelet Namespace manifest
+	namespaceManifest := map[string]interface{}{
+		"apiVersion":"v1",
+		"kind":"Namespace",
+		"metadata": map[string]interface{}{
+			"name": "virtual-kubelet",
+			"labels": map[string]interface{}{
+				"name": "virtual-kubelet",
+			},
+		},
+	}
+
+	// Add Namespace to cluster (CDK does not currently have a higher-level construct for doing this in Go)
+	namespace := cluster.AddManifest(jsii.String("VKNamespace"),&namespaceManifest)
+
 	// EKS Service Account (IAM Role and associated Kubernetes Service Account)
 	// See https://github.com/aws/aws-cdk/tree/master/packages/%40aws-cdk/aws-eks#service-accounts
 	serviceAccount := cluster.AddServiceAccount(jsii.String("VKServiceAccount"), &awseks.ServiceAccountOptions{
 		Name:      jsii.String("virtual-kubelet-sa"),
-		Namespace: jsii.String("kube-system"),
+		Namespace: jsii.String("virtual-kubelet"),
 	})
+
+	// Ensure the Namespace is created before the Service Account that goes in it
+	serviceAccount.Node().AddDependency(namespace)
+
 	// Allow EKS (Virtual Kubelet) Service Account to manage EC2 instances
 	serviceAccount.Role().AddToPrincipalPolicy(awsiam.NewPolicyStatement(&awsiam.PolicyStatementProps{
 		Actions: jsii.Strings(
-			"ec2:CreateNetworkInterface",
-			"ec2:TerminateInstances",
-			"ec2:DescribeNetworkInterfaces",
-			"ec2:DeleteNetworkInterface",
-			"ec2:RunInstances",
+			// permission use / justification noted in comments below
+			"ec2:CreateNetworkInterface", // needed to create the ENI that serves as the virtual kubelet "node"
+			"ec2:DescribeNetworkInterfaces", // needed to obtain the private IP of the ENI for node-naming
+			"ec2:DeleteNetworkInterface", // needed to remove the "node" ENI
+			"ec2:RunInstances", // needed to launch pod and warm pool instances
+			"ec2:DescribeInstances", // needed to get EC2 information and status
+			"ec2:TerminateInstances",  // needed to remove pod and warm pool instances
+			"ec2:CreateTags", // needed to tag pod and warm pool instances
 		),
 		// TODO add Tag or other conditions to limit `DeleteNetworkInterface` and `TerminateInstances` to those created
 		//  by virtual-kubelet
 		//Conditions:    nil,
-		Effect:    "Allow",
+		Effect:    awsiam.Effect_ALLOW,
 		Resources: jsii.Strings("*"),
 	}))
 
