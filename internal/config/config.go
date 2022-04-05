@@ -38,6 +38,7 @@ type ProviderConfig struct {
 	HealthConfig              HealthConfig
 	VKVMAgentConnectionConfig VkvmaConfig
 	WarmPoolConfig            []WarmPoolConfig `default:"-"`
+	HttpClientTimeoutSeconds  int              `default:"30"`
 }
 
 // VMConfig defines Default configurations for EC2 Instances if not otherwise specified.
