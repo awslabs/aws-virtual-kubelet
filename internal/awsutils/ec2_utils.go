@@ -174,7 +174,7 @@ func GetInstanceStatusById(instanceId string, ec2Client EC2API) (status string, 
 
 // CreateEC2 generates a new EC2 instance based upon the input values provided.
 func CreateEC2(ctx context.Context, pod *corev1.Pod, clientTimeoutSeconds int, userData string, presignBucket string, presignKey string) (string, error) {
-	ec2Client, err := NewEc2Client(clientTimeoutSeconds)
+	ec2Client, err := NewEc2Client()
 	if err != nil {
 		return "", err
 	}
@@ -248,7 +248,7 @@ func TerminateEC2(ctx context.Context, instanceID string, clientTimeoutSeconds i
 		InstanceIds: []string{instanceID},
 	}
 
-	ec2Client, err := NewEc2Client(clientTimeoutSeconds)
+	ec2Client, err := NewEc2Client()
 
 	resp, err := ec2Client.TerminateInstances(ctx, &terminateInstanceInput)
 	if err != nil {
@@ -295,7 +295,7 @@ func UpdateInstanceSecurityGroups(ctx context.Context, ec2Client EC2API, instanc
 
 // GetPrivateIP gets private ip of the EC2 instance
 func GetPrivateIP(instanceID string, clientTimeoutSeconds int) (privateIp string, err error) {
-	ec2Client, err := NewEc2Client(clientTimeoutSeconds)
+	ec2Client, err := NewEc2Client()
 	if err != nil {
 		return "", err
 	}

@@ -34,21 +34,17 @@ type ComputeManager interface {
 }
 
 type computeManager struct {
-	clientTimeoutSeconds int
-	ec2Client            *awsutils.Client
+	ec2Client *awsutils.Client
 }
 
 func NewComputeManager(ctx context.Context) (*computeManager, error) {
-	cfg := config.Config()
-
-	ec2, err := awsutils.NewEc2Client(cfg.HealthCheckIntervalSeconds)
+	ec2, err := awsutils.NewEc2Client()
 	if err != nil {
 		return nil, err
 	}
 
 	return &computeManager{
-		clientTimeoutSeconds: cfg.HealthCheckIntervalSeconds,
-		ec2Client:            ec2,
+		ec2Client: ec2,
 	}, nil
 }
 
@@ -96,13 +92,11 @@ func (c *computeManager) GetCompute(ctx context.Context, p *Ec2Provider, pod *co
 }
 
 func (c *computeManager) podHasInstance(ctx context.Context, pod *corev1.Pod) bool {
-	cfg := config.Config()
-
 	podInstanceID := pod.Annotations["compute.amazonaws.com/instance-id"]
 
 	// if we already created an instance for this pod (in which case the instance-id annotation will be set)
 	if podInstanceID != "" {
-		ec2Client, err := awsutils.NewEc2Client(cfg.HealthCheckIntervalSeconds)
+		ec2Client, err := awsutils.NewEc2Client()
 		if err != nil {
 			// if we get an error trying to create an Ec2 client, assume we don't have a valid instance
 			return false

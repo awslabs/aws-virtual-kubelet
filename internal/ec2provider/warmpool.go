@@ -73,7 +73,7 @@ func NewWarmPool(ctx context.Context, provider *Ec2Provider) (*WarmPoolManager, 
 
 	klog.Infof("Creating Warm Pool Manager with config '%+v'", cfg.WarmPoolConfig)
 
-	ec2Client, err := awsutils.NewEc2Client(cfg.HealthCheckIntervalSeconds)
+	ec2Client, err := awsutils.NewEc2Client()
 	if err != nil {
 		klog.Errorf("Can't create Ec2 client in Warm Pool init: %v", err)
 		return nil, err
