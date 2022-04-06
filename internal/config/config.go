@@ -33,12 +33,12 @@ type ProviderConfig struct {
 	// Subnet used for... TODO describe how this is used
 	ManagementSubnet string
 
-	VMConfig                   VMConfig       `default:"{}"`
-	BootstrapAgent             BootstrapAgent `default:"{}"`
-	HealthConfig               HealthConfig
-	VKVMAgentConnectionConfig  VkvmaConfig
-	WarmPoolConfig             []WarmPoolConfig `default:"-"`
-	HealthCheckIntervalSeconds int              `default:"60"`
+	VMConfig                  VMConfig       `default:"{}"`
+	BootstrapAgent            BootstrapAgent `default:"{}"`
+	HealthConfig              HealthConfig
+	VKVMAgentConnectionConfig VkvmaConfig
+	WarmPoolConfig            []WarmPoolConfig `default:"-"`
+	AWSClientTimeoutSeconds   int              `default:"30"`
 }
 
 // VMConfig defines Default configurations for EC2 Instances if not otherwise specified.

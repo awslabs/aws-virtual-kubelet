@@ -136,7 +136,6 @@ func (c *computeManager) createCompute(ctx context.Context, pod *corev1.Pod) (st
 	klog.Info("Generating a fresh EC2 Instance")
 	finalUserData, err := awsutils.GenerateVKVMUserData(
 		ctx,
-		cfg.HealthCheckIntervalSeconds,
 		cfg.BootstrapAgent.S3Bucket,
 		cfg.BootstrapAgent.S3Key,
 		cfg.VMConfig.InitData,
@@ -146,7 +145,6 @@ func (c *computeManager) createCompute(ctx context.Context, pod *corev1.Pod) (st
 	instanceID, err := awsutils.CreateEC2(
 		ctx,
 		pod,
-		cfg.HealthCheckIntervalSeconds,
 		finalUserData,
 		cfg.BootstrapAgent.S3Bucket,
 		cfg.BootstrapAgent.S3Key,
@@ -158,7 +156,7 @@ func (c *computeManager) createCompute(ctx context.Context, pod *corev1.Pod) (st
 		return "", "", fmt.Errorf("failed to create ec2 instance, error : %v ", err.Error())
 	}
 
-	privateIP, err := awsutils.GetPrivateIP(instanceID, cfg.HealthCheckIntervalSeconds)
+	privateIP, err := awsutils.GetPrivateIP(instanceID)
 	if err != nil {
 		return "", "", err
 	}
@@ -169,11 +167,10 @@ func (c *computeManager) createCompute(ctx context.Context, pod *corev1.Pod) (st
 }
 
 func (c *computeManager) deleteCompute(ctx context.Context, pod *corev1.Pod) error {
-	cfg := config.Config()
-
+	
 	podInstanceID := pod.Annotations["compute.amazonaws.com/instance-id"]
 
-	instanceId, err := awsutils.TerminateEC2(ctx, podInstanceID, cfg.HealthCheckIntervalSeconds)
+	instanceId, err := awsutils.TerminateEC2(ctx, podInstanceID)
 	if err != nil {
 		klog.Errorf("error terminating EC2 instance %v: %v", instanceId, err)
 	}

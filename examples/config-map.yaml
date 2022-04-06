@@ -18,6 +18,7 @@ data:
       "ManagementSubnet": "subnet-bad5ede0febe6dd",
       "ClusterName": "aws-virtual-kubelet",
       "Region": "us-west-2",
+      "awsClientTimeoutSeconds":30
       "VMConfig": {
         "DefaultAMI": "ami-badf005ba117ab1e5",
         "InitData": "base64encoded"

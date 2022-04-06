@@ -31,7 +31,7 @@ type Client struct {
 func NewEc2Client() (*Client, error) {
 	// Initialize client session configuration.
 	vkcfg := vkconfig.Config()
-	httpClient := http.NewBuildableClient().WithTimeout(time.Second * time.Duration(vkcfg.HealthCheckIntervalSeconds))
+	httpClient := http.NewBuildableClient().WithTimeout(time.Second * time.Duration(vkcfg.AWSClientTimeoutSeconds))
 	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithHTTPClient(httpClient))
 	if err != nil {
 		klog.Fatalf("unable to load SDK config, %v", err)

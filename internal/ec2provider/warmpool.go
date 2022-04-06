@@ -221,7 +221,6 @@ func (wpm *WarmPoolManager) CreateWarmEC2(ctx context.Context, wpConfig config.W
 
 	finalUserData, err := awsutils.GenerateVKVMUserData(
 		ctx,
-		cfg.HealthCheckIntervalSeconds,
 		cfg.BootstrapAgent.S3Bucket,
 		cfg.BootstrapAgent.S3Key,
 		cfg.VMConfig.InitData,
@@ -408,9 +407,8 @@ func (wpm *WarmPoolManager) GetWarmPoolInstanceIfExist(ctx context.Context) (ins
 //TerminateInstance provides a way to terminate an EC2 instance.
 // To be explicitly used for Warmpool Management and prefer DeletePod once a Pod is set.
 func (wpm *WarmPoolManager) TerminateInstance(ctx context.Context, instanceID string) (resp string, err error) {
-	cfg := config.Config()
 
-	resp, err = awsutils.TerminateEC2(ctx, instanceID, cfg.HealthCheckIntervalSeconds)
+	resp, err = awsutils.TerminateEC2(ctx, instanceID)
 	return resp, err
 }
 
