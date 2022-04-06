@@ -43,8 +43,8 @@ func NewVKStack(scope constructs.Construct, id string, props *VKStackProps) awsc
 
 	// Virtual Kubelet Namespace manifest
 	namespaceManifest := map[string]interface{}{
-		"apiVersion":"v1",
-		"kind":"Namespace",
+		"apiVersion": "v1",
+		"kind":       "Namespace",
 		"metadata": map[string]interface{}{
 			"name": "virtual-kubelet",
 			"labels": map[string]interface{}{
@@ -54,7 +54,7 @@ func NewVKStack(scope constructs.Construct, id string, props *VKStackProps) awsc
 	}
 
 	// Add Namespace to cluster (CDK does not currently have a higher-level construct for doing this in Go)
-	namespace := cluster.AddManifest(jsii.String("VKNamespace"),&namespaceManifest)
+	namespace := cluster.AddManifest(jsii.String("VKNamespace"), &namespaceManifest)
 
 	// EKS Service Account (IAM Role and associated Kubernetes Service Account)
 	// See https://github.com/aws/aws-cdk/tree/master/packages/%40aws-cdk/aws-eks#service-accounts
@@ -70,13 +70,13 @@ func NewVKStack(scope constructs.Construct, id string, props *VKStackProps) awsc
 	serviceAccount.Role().AddToPrincipalPolicy(awsiam.NewPolicyStatement(&awsiam.PolicyStatementProps{
 		Actions: jsii.Strings(
 			// permission use / justification noted in comments below
-			"ec2:CreateNetworkInterface", // needed to create the ENI that serves as the virtual kubelet "node"
+			"ec2:CreateNetworkInterface",    // needed to create the ENI that serves as the virtual kubelet "node"
 			"ec2:DescribeNetworkInterfaces", // needed to obtain the private IP of the ENI for node-naming
-			"ec2:DeleteNetworkInterface", // needed to remove the "node" ENI
-			"ec2:RunInstances", // needed to launch pod and warm pool instances
-			"ec2:DescribeInstances", // needed to get EC2 information and status
-			"ec2:TerminateInstances",  // needed to remove pod and warm pool instances
-			"ec2:CreateTags", // needed to tag pod and warm pool instances
+			"ec2:DeleteNetworkInterface",    // needed to remove the "node" ENI
+			"ec2:RunInstances",              // needed to launch pod and warm pool instances
+			"ec2:DescribeInstances",         // needed to get EC2 information and status
+			"ec2:TerminateInstances",        // needed to remove pod and warm pool instances
+			"ec2:CreateTags",                // needed to tag pod and warm pool instances
 		),
 		// TODO add Tag or other conditions to limit `DeleteNetworkInterface` and `TerminateInstances` to those created
 		//  by virtual-kubelet
