@@ -12,6 +12,7 @@ package awsutils
 import (
 	"context"
 	"errors"
+	"net"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws/transport/http"
@@ -30,8 +31,14 @@ type Client struct {
 // NewEc2Client creates a new AWS client in the given region.
 func NewEc2Client() (*Client, error) {
 	// Initialize client session configuration.
+	//TODO Ideally we should set overall timeout for API, refer to below documentation
+	//https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/custom-http/
+	//https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/retries-timeouts/
 	vkcfg := vkconfig.Config()
-	httpClient := http.NewBuildableClient().WithTimeout(time.Second * time.Duration(vkcfg.AWSClientTimeoutSeconds))
+	httpClient := http.NewBuildableClient().WithTimeout(time.Second * time.Duration(vkcfg.AWSClientTimeoutSeconds)).WithDialerOptions(func(d *net.Dialer) {
+		d.KeepAlive = -1
+		d.Timeout = time.Second * time.Duration(vkcfg.AWSClientDialerTimeoutSeconds)
+	})
 	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithHTTPClient(httpClient))
 	if err != nil {
 		klog.Fatalf("unable to load SDK config, %v", err)
