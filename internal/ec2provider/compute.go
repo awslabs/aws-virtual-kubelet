@@ -14,6 +14,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/aws/aws-virtual-kubelet/internal/config"
+
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 
 	"github.com/aws/aws-virtual-kubelet/internal/utils"
@@ -36,7 +38,10 @@ type computeManager struct {
 	ec2Client *awsutils.Client
 }
 
-func NewComputeManager(ctx context.Context, region string) (*computeManager, error) {
+func NewComputeManager(ctx context.Context) (*computeManager, error) {
+	cfg := config.Config()
+	region := cfg.Region
+
 	ec2, err := awsutils.NewEc2Client(region)
 	if err != nil {
 		return nil, err
@@ -52,7 +57,7 @@ func NewComputeManager(ctx context.Context, region string) (*computeManager, err
 //  instance, or other appropriate source
 func (c *computeManager) GetCompute(ctx context.Context, p *Ec2Provider, pod *corev1.Pod) (string, string, error) {
 	// if we already have an instance associated with this pod, just find and return that
-	if c.podHasInstance(ctx, p, pod) {
+	if c.podHasInstance(ctx, pod) {
 		podInstanceID := pod.Annotations["compute.amazonaws.com/instance-id"]
 		klog.Infof("Pod %v(%v) already assigned to instance %v (reusing compute)",
 			pod.Name, pod.Namespace, podInstanceID)
@@ -87,16 +92,19 @@ func (c *computeManager) GetCompute(ctx context.Context, p *Ec2Provider, pod *co
 			return "", "", err
 		}
 	} else {
-		return c.createCompute(ctx, p, pod)
+		return c.createCompute(ctx, pod)
 	}
 }
 
-func (c *computeManager) podHasInstance(ctx context.Context, p *Ec2Provider, pod *corev1.Pod) bool {
+func (c *computeManager) podHasInstance(ctx context.Context, pod *corev1.Pod) bool {
+	cfg := config.Config()
+	region := cfg.Region
+
 	podInstanceID := pod.Annotations["compute.amazonaws.com/instance-id"]
 
 	// if we already created an instance for this pod (in which case the instance-id annotation will be set)
 	if podInstanceID != "" {
-		ec2Client, err := awsutils.NewEc2Client(p.Config.Region)
+		ec2Client, err := awsutils.NewEc2Client(region)
 		if err != nil {
 			// if we get an error trying to create an Ec2 client, assume we don't have a valid instance
 			return false
@@ -126,28 +134,30 @@ func (c *computeManager) podHasInstance(ctx context.Context, p *Ec2Provider, pod
 
 // DeleteCompute removes compute for the given pod. NOTE instances are terminated, even if they came from a warm pool
 func (c *computeManager) DeleteCompute(ctx context.Context, p *Ec2Provider, pod *corev1.Pod) error {
-	return c.deleteCompute(ctx, p, pod)
+	return c.deleteCompute(ctx, pod)
 }
 
 //func (c *computeManager) createCompute(ctx context.Context, p *Ec2Provider, pod *corev1.Pod) (*interface{}, error) {
-func (c *computeManager) createCompute(ctx context.Context, p *Ec2Provider, pod *corev1.Pod) (string, string, error) {
+func (c *computeManager) createCompute(ctx context.Context, pod *corev1.Pod) (string, string, error) {
+	cfg := config.Config()
+
 	klog.Info("Generating a fresh EC2 Instance")
 	finalUserData, err := awsutils.GenerateVKVMUserData(
 		ctx,
-		p.Config.Region,
-		p.Config.BootstrapAgent.S3Bucket,
-		p.Config.BootstrapAgent.S3Key,
-		p.Config.VMConfig.InitData,
-		p.Config.BootstrapAgent.InitData,
+		cfg.Region,
+		cfg.BootstrapAgent.S3Bucket,
+		cfg.BootstrapAgent.S3Key,
+		cfg.VMConfig.InitData,
+		cfg.BootstrapAgent.InitData,
 	)
 
 	instanceID, err := awsutils.CreateEC2(
 		ctx,
 		pod,
-		p.Config.Region,
+		cfg.Region,
 		finalUserData,
-		p.Config.BootstrapAgent.S3Bucket,
-		p.Config.BootstrapAgent.S3Key,
+		cfg.BootstrapAgent.S3Bucket,
+		cfg.BootstrapAgent.S3Key,
 	)
 
 	// Await EC2 Launch
@@ -156,7 +166,7 @@ func (c *computeManager) createCompute(ctx context.Context, p *Ec2Provider, pod 
 		return "", "", fmt.Errorf("failed to create ec2 instance, error : %v ", err.Error())
 	}
 
-	privateIP, err := awsutils.GetPrivateIP(instanceID, p.Config.Region)
+	privateIP, err := awsutils.GetPrivateIP(instanceID, cfg.Region)
 	if err != nil {
 		return "", "", err
 	}
@@ -166,10 +176,13 @@ func (c *computeManager) createCompute(ctx context.Context, p *Ec2Provider, pod 
 	return instanceID, privateIP, nil
 }
 
-func (c *computeManager) deleteCompute(ctx context.Context, p *Ec2Provider, pod *corev1.Pod) error {
+func (c *computeManager) deleteCompute(ctx context.Context, pod *corev1.Pod) error {
+	cfg := config.Config()
+	region := cfg.Region
+
 	podInstanceID := pod.Annotations["compute.amazonaws.com/instance-id"]
 
-	instanceId, err := awsutils.TerminateEC2(ctx, podInstanceID, p.Config.Region)
+	instanceId, err := awsutils.TerminateEC2(ctx, podInstanceID, region)
 	if err != nil {
 		klog.Errorf("error terminating EC2 instance %v: %v", instanceId, err)
 	}
