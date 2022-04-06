@@ -167,7 +167,7 @@ func (c *computeManager) createCompute(ctx context.Context, pod *corev1.Pod) (st
 }
 
 func (c *computeManager) deleteCompute(ctx context.Context, pod *corev1.Pod) error {
-	
+
 	podInstanceID := pod.Annotations["compute.amazonaws.com/instance-id"]
 
 	instanceId, err := awsutils.TerminateEC2(ctx, podInstanceID)
