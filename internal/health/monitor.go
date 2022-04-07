@@ -13,6 +13,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/aws/aws-virtual-kubelet/internal/metrics"
+
 	"github.com/aws/aws-virtual-kubelet/internal/config"
 
 	corev1 "k8s.io/api/core/v1"
@@ -123,6 +125,7 @@ func (m *Monitor) resetFailures() {
 	klog.V(1).InfoS(
 		"Failure counter reset", "monitor", m.Name, "resource", klog.KObj(m.Resource.(*corev1.Pod)))
 	m.State = MonitoringStateHealthy
+	metrics.HealthCheckStateReset.Inc()
 }
 
 func (m *Monitor) incrementFailures(unhealthyThreshold int) {
@@ -135,6 +138,7 @@ func (m *Monitor) incrementFailures(unhealthyThreshold int) {
 			"Monitor has reached unhealthy threshold", "monitor", m.Name, "threshold", unhealthyThreshold,
 			"resource", klog.KObj(m.Resource.(*corev1.Pod)))
 		m.State = MonitoringStateUnhealthy
+		metrics.HealthCheckStateUnhealthy.Inc()
 	}
 }
 

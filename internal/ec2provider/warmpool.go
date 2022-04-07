@@ -15,6 +15,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/aws/aws-virtual-kubelet/internal/metrics"
+
 	"github.com/aws/aws-virtual-kubelet/internal/config"
 
 	"github.com/aws/aws-virtual-kubelet/internal/awsutils"
@@ -213,6 +215,10 @@ func (wpm *WarmPoolManager) updateEC2Tags(ctx context.Context, instanceID string
 	input.Resources = append(input.Resources, instanceID)
 	input.Tags = tags[0].Tags
 	_, err := wpm.ec2Client.CreateTags(ctx, &input)
+	if err != nil {
+		metrics.EC2TagCreationErrors.Inc()
+		klog.Errorf("error creating ec2 tag : %v ", err)
+	}
 	return err
 }
 
@@ -257,10 +263,11 @@ func (wpm *WarmPoolManager) CreateWarmEC2(ctx context.Context, wpConfig config.W
 	)
 	if err != nil {
 		klog.Errorf("error while generating an EC2 instance: %v", err)
+		metrics.WarmEC2LaunchErrors.Inc()
 		return "", "", "", []string{""}, err
 	}
 	klog.Infof("Created EC2 Instance ID in WarmPool: %v", *resp.Instances[0].InstanceId)
-
+	metrics.WarmEC2Launched.Inc()
 	instance := resp.Instances[0]
 
 	// collect list of security group ids
@@ -307,7 +314,12 @@ func (wpm *WarmPoolManager) CheckWarmPoolDepth(ctx context.Context, wpc config.W
 			}
 		}
 		klog.Infof("Terminating %v excess WarmPool EC2 Instances", cumulativeWarmEC2-wpc.DesiredCount)
-		wpm.ec2Client.TerminateInstances(ctx, &ec2.TerminateInstancesInput{InstanceIds: terminatingInstances})
+		_, err := wpm.ec2Client.TerminateInstances(ctx, &ec2.TerminateInstancesInput{InstanceIds: terminatingInstances})
+		if err != nil {
+			klog.Errorf("unable to terminate warm instances with error : %v", err)
+			metrics.WarmEC2TerminationErrors.Inc()
+		}
+		metrics.WarmEC2Terminated.Inc()
 	} else {
 		klog.Info("No WarmPool Maintenance Action Taken")
 	}
