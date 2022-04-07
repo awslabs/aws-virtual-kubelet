@@ -5,6 +5,10 @@
 # available at http://aws.amazon.com/agreement or other written agreement between
 # Customer and either Amazon Web Services, Inc. or Amazon Web Services EMEA SARL or both.
 ---
+# Upstream virtual-kubelet is the originator of these rules and their operations (this provider implementation is one
+#  layer below and generally does not interact directly with the Kubernetes API
+# NOTE these rules are modeled after the upstream virtual-kubelet rule set in the e2e tests:
+# https://github.com/virtual-kubelet/virtual-kubelet/blob/7c9bd20eea6f4b37929fb765ca80d69262ca51c5/hack/skaffold/virtual-kubelet/base.yml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -12,67 +16,67 @@ metadata:
   namespace: kube-system
 rules:
   - verbs:
-      - get
-      - create
+      - get # get virtual node info from k8s
+      - create # create virtual node in k8s
     apiGroups:
       - ''
     resources:
-      - nodes
+      - nodes # virtual-kubelet node
   - verbs:
-      - patch
+      - patch # update virtual node status
     apiGroups:
       - ''
     resources:
-      - nodes/status
+      - nodes/status # virtual-kubelet node status
   - verbs:
-      - create
-      - patch
+      - create # create k8s events
+      - patch # update k8s events
     apiGroups:
       - ''
     resources:
-      - events
+      - events # events to broadcast changes to the k8s system
   - verbs:
-      - list
-      - get
-      - watch
-      - update
-      - delete
-      - create
+      - list # list pods
+      - get # get a pod
+      - watch # monitor pod status
+      - update # update a pod status
+      - delete # delete a pod
+      - create # create a pod
     apiGroups:
       - ''
     resources:
-      - pods
-      - pods/status
+      - pods # virtual-kubelet pods
+      - pods/status # virtual-kubelet pod status
   - verbs:
-      - list
-      - get
-      - watch
+      - list # list services or persistent volumes (or the claims pods request against volumes)
+      - get # get a service, persistent volume, or claim
+      - watch # watch a service, persistent volume, or claim
     apiGroups:
       - ''
     resources:
-      - services
-      - persistentvolumes
-      - persistentvolumeclaims
+      - services # services exposed by the virtual kubelet resource manager
+      - persistentvolumes # enable volume mounts for virtual kubelet pods
+      - persistentvolumeclaims # enable pod claims against volumes for virtual kubelet pods
   - verbs:
-      - get
-      - list
-      - watch
-      - create
-      - update
+      - get # get a configMap or secret
+      - list # list configMaps or secrets
+      - watch # watch a configMap or secret for changes
+      - create # create a configMap or secret
+      - update # update a configMap or secret
     apiGroups:
       - ''
     resources:
-      - configmaps
-      - secrets
+      - configmaps # used by virtual kubelet and secure VKVMAgent connections
+      - secrets # used by virtual kubelet and secure VKVMAgent connections
   - verbs:
-      - create
-      - get
-      - list
-      - update
+      - create # create a lease for a resource
+      - get # get the lease for a resource
+      - list # list resource leases
+      - update # update a resource lease
     apiGroups:
       - coordination.k8s.io
     resources:
-      - leases
+      - leases # leases create time-bound access to resources and are used by virtual kubelet
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
