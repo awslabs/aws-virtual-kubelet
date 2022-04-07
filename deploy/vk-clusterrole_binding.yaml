@@ -13,7 +13,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: cluster-vk-admin
-  namespace: kube-system
+  namespace: virtual-kubelet
 rules:
   - verbs:
       - get # get virtual node info from k8s
@@ -89,4 +89,4 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: virtual-kubelet-sa
-    namespace: kube-system
+    namespace: virtual-kubelet

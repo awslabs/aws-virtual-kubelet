@@ -1,5 +1,5 @@
 {
-  "app": "go mod download && go run pipeline-infra.go",
+  "app": "go mod download && go run vkstack.go",
   "watch": {
     "include": [
       "**"
