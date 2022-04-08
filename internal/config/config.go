@@ -32,16 +32,18 @@ type ProviderConfig struct {
 	ClusterName string `default:"aws-virtual-kubelet"`
 	// Subnet used for... TODO describe how this is used
 	ManagementSubnet string
+	// AWS client overall timeout (from request to response)
+	AWSClientTimeoutSeconds int `default:"10"`
+	// AWS client connection timeout (set explicitly to enable faster retries within the overall timeout)
+	AWSClientDialerTimeoutSeconds int `default:"2"`
 
-	VMConfig                  VMConfig       `default:"{}"`
-	BootstrapAgent            BootstrapAgent `default:"{}"`
 	HealthConfig              HealthConfig
 	VKVMAgentConnectionConfig VkvmaConfig
-	WarmPoolConfig            []WarmPoolConfig `default:"-"`
-	//http client request timeout limit
-	AWSClientTimeoutSeconds int `default:"10"`
-	//http client dialer timeout limit
-	AWSClientDialerTimeoutSeconds int `default:"2"`
+
+	// Optional sub-configs
+	VMConfig       VMConfig         `default:"{}"`
+	BootstrapAgent BootstrapAgent   `default:"{}"`
+	WarmPoolConfig []WarmPoolConfig `default:"-"`
 }
 
 // VMConfig defines Default configurations for EC2 Instances if not otherwise specified.

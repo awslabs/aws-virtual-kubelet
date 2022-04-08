@@ -32,9 +32,9 @@ type S3Client struct {
 // NewS3Client Generates a new S3 Client to be utilized across the program.
 func NewS3Client() (*S3Client, error) {
 	// Initialize client session configuration.
-	//TODO Ideally we should set overall timeout for API, refer to below documentation
-	//https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/custom-http/
-	//https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/retries-timeouts/
+	// See the following links for an explanation of the timeout options
+	// https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/custom-http/
+	// https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/retries-timeouts/
 	vkcfg := vkconfig.Config()
 	httpClient := http.NewBuildableClient().WithTimeout(time.Second * time.Duration(vkcfg.AWSClientTimeoutSeconds)).WithDialerOptions(func(d *net.Dialer) {
 		d.KeepAlive = -1
