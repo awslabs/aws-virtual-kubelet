@@ -1,6 +1,6 @@
 
 ## Metrics
-Virtual Kubelet uses Prometheus to collect metrics, Prometheus is an open-source system that collects and stores its metrics as time series data,
+Virtual Kubelet uses [Prometheus](https://prometheus.io/) to collect metrics, Prometheus is an open-source system that collects and stores its metrics as time series data.
 
 ----
 
@@ -56,4 +56,4 @@ Virtual Kubelet uses Prometheus to collect metrics, Prometheus is an open-source
 * /healthz
 
 ### Checking metrics
-* run `curl http://{vk-ip}:10256/metrics` from an EC2 instance that is managed by VK
+* run `curl http://{vk-ip}:10256/metrics` from inside the worker node VPC

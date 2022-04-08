@@ -217,7 +217,7 @@ func (wpm *WarmPoolManager) updateEC2Tags(ctx context.Context, instanceID string
 	_, err := wpm.ec2Client.CreateTags(ctx, &input)
 	if err != nil {
 		metrics.EC2TagCreationErrors.Inc()
-		klog.Errorf("error creating ec2 tag : %v ", err)
+		klog.ErrorS(err, "error creating ec2 tag", "instanceID", instanceID, "reason", reason, "pod", klog.KObj(&pod))
 	}
 	return err
 }
