@@ -15,6 +15,8 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/aws/aws-virtual-kubelet/internal/metrics"
+
 	"github.com/aws/aws-virtual-kubelet/internal/config"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -49,6 +51,7 @@ func checkAppHealth(ctx context.Context, m *Monitor) *checkResult {
 			pod.Name, pod.Namespace, err)
 		result := NewCheckResult(m, true, message, nil)
 		klog.Warningf("Premature check failure: %+v", result)
+		metrics.GRPCAppClientErrors.Inc()
 		return result
 	}
 
@@ -58,6 +61,7 @@ func checkAppHealth(ctx context.Context, m *Monitor) *checkResult {
 			pod.Name, pod.Namespace, err)
 		result := NewCheckResult(m, true, message, nil)
 		klog.Warningf("Premature check failure: %+v", result)
+		metrics.CheckApplicationHealthErrors.Inc()
 		return result
 	}
 	klog.V(1).InfoS("Received application health response", "response", appHealthResp, "pod", klog.KObj(pod))
@@ -82,6 +86,7 @@ func watchAppHealth(ctx context.Context, m *Monitor, ch *CheckHandler) error {
 			pod.Name, pod.Namespace, err)
 		result := NewCheckResult(m, true, message, nil)
 		klog.Warningf("Premature check failure: %+v", result)
+		metrics.GRPCAppClientErrors.Inc()
 		ch.in <- result
 		return nil
 	}
@@ -92,6 +97,7 @@ func watchAppHealth(ctx context.Context, m *Monitor, ch *CheckHandler) error {
 			pod.Name, pod.Namespace, err)
 		result := NewCheckResult(m, true, message, nil)
 		klog.Warningf("Premature check failure: %+v", result)
+		metrics.WatchApplicationHealthErrors.Inc()
 		ch.in <- result
 		return nil
 	}
@@ -126,6 +132,7 @@ func watchAppHealth(ctx context.Context, m *Monitor, ch *CheckHandler) error {
 						pod.Name, pod.Namespace, err)
 					result := NewCheckResult(m, true, message, nil)
 					klog.Warningf("Premature check failure: %+v", result)
+					metrics.WatchApplicationHealthStreamErrors.Inc()
 					ch.in <- result
 
 					// signal done so the enclosing function exits and gets reconnected to the stream

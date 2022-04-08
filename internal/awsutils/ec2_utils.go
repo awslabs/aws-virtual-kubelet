@@ -255,11 +255,11 @@ func TerminateEC2(ctx context.Context, instanceID string) (string, error) {
 		if strings.Contains(err.Error(), "InvalidInstanceID.NotFound") {
 			return "", nil
 		}
-		metrics.EC2TerminatationErrors.Inc()
+		metrics.EC2TerminationErrors.Inc()
 		return "", err
 	}
 	klog.Infof("Terminated EC2 Instance ID : %v", *resp.TerminatingInstances[0].InstanceId)
-	metrics.EC2Terminatated.Inc()
+	metrics.EC2Terminated.Inc()
 	return *resp.TerminatingInstances[0].InstanceId, nil
 }
 
@@ -317,6 +317,7 @@ func GetPrivateIP(instanceID string) (privateIp string, err error) {
 	result, err := ec2Client.DescribeInstances(context.TODO(), input)
 	if err != nil {
 		klog.Error(err)
+		metrics.DescribeEC2Errors.Inc()
 		return "", errors.New(err.Error() + " , Input instanceId :" + instanceID)
 	}
 	//throw error if number of reservations / instances are not equal to 1

@@ -36,7 +36,7 @@ func TestMetricsCounter(t *testing.T) {
 			//find PodCreated metrics value from the MetricsFamily list
 			var podMetric io_prometheus_client.MetricFamily
 			for i := 0; i < len(metricFamilyList); i++ {
-				if strings.Compare(*metricFamilyList[i].Name, "pod_created") == 0 {
+				if strings.Compare(*metricFamilyList[i].Name, "vkec2_pods_created_total") == 0 {
 					podMetric = *metricFamilyList[i]
 					break
 				}

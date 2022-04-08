@@ -153,6 +153,7 @@ func (p *Ec2Provider) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 	_, err = p.launchApplication(ctx, pod)
 	if err != nil {
 		klog.ErrorS(err, "Error launching application", "pod", klog.KObj(pod))
+		metrics.LaunchApplicationErrors.Inc()
 		return err
 	}
 
@@ -213,6 +214,7 @@ func (p *Ec2Provider) DeletePod(ctx context.Context, pod *corev1.Pod) error {
 	err = p.terminateApp(ctx, metaPod)
 	if err != nil {
 		klog.ErrorS(err, "Could not terminate application", "pod", klog.KObj(metaPod.pod))
+		metrics.TerminateApplicationErrors.Inc()
 		return err
 	}
 
@@ -314,7 +316,7 @@ func (p *Ec2Provider) launchApplication(
 	appClient, err := vkvmaClient.GetApplicationLifecycleClient(ctx)
 	if err != nil {
 		klog.ErrorS(err, "Error getting ApplicationLifecycleClient", "pod", klog.KObj(pod))
-
+		metrics.GRPCAppClientErrors.Inc()
 		err2 := p.computeManager.DeleteCompute(ctx, p, pod)
 		if err2 != nil {
 			klog.ErrorS(err2, "Error deleting compute while cleaning up failed CreatePod", "original error", err)
@@ -418,6 +420,7 @@ func (p *Ec2Provider) terminateApp(ctx context.Context, metaPod *MetaPod) error 
 	appClient, err := vkvmaClient.GetApplicationLifecycleClient(ctx)
 	if err != nil {
 		klog.ErrorS(err, "Could not get ApplicationLifecycleClient", "pod", klog.KObj(metaPod.pod))
+		metrics.GRPCAppClientErrors.Inc()
 		return err
 	}
 
