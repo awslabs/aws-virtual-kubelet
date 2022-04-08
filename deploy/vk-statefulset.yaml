@@ -9,7 +9,7 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: virtual-kubelet-set
-  namespace: kube-system
+  namespace: virtual-kubelet
   labels:
     app: virtual-kubelet
 spec:
