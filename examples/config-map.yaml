@@ -9,7 +9,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: virtual-kubelet-cfg
-  namespace: kube-system
+  namespace: virtual-kubelet
 data:
   # property-like keys; each key maps to a simple value
   # Required Values for Virtual Kubelet
@@ -18,6 +18,8 @@ data:
       "ManagementSubnet": "subnet-bad5ede0febe6dd",
       "ClusterName": "aws-virtual-kubelet",
       "Region": "us-west-2",
+      "AWSClientTimeoutSeconds":10
+      "AWSClientDialerTimeoutSeconds":2
       "VMConfig": {
         "DefaultAMI": "ami-badf005ba117ab1e5",
         "InitData": "base64encoded"

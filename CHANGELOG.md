@@ -1,6 +1,14 @@
 # Changelog
 
-## [0.5.2]() (2022-03-23)
+## [v0.5.2+opensource]() (2022-04-06)
+### 🎉 Features
+* **ec2:** changed EC2 API polling loop to use [Waiters](https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/making-requests.html#using-waiters)
+
+### 🧹 Chores
+* **docs:** added verbiage, templates, and files for Open Source version
+* **cleanup:** removed **`TODO`**s, comments, and unused code throughout
+
+## [v0.5.2]() (2022-03-23)
 
 ### 🐛 Bug Fixes
 * **awsutils:** log an Error if EC2 `RunInstances` doesn't return an instance ID
@@ -28,15 +36,15 @@
 # Template
 Use this template and checklist to create new changelog entries.
 
-- [ ] update `#.#.#` with the new revision
+- [ ] update `v#.#.#` with the new revision
 - [ ] insert the diff URL comparing against the previous version
 - [ ] update the `(date)`
 - [ ] note new _Features_, _Bug Fixes_, etc. using the formatting examples provided below (**`TIP`** compare the previous version tag with `HEAD` to see new PRs / changes)
 
-##  **`WIP`** 🚧 [0.0.2]() (2021-01-02)
+##  **`WIP`** 🚧 [v0.0.2]() (2021-01-02)
 > Next Release _Work In Progress_
 
-## [0.0.1]() (2021-01-01)
+## [v0.0.1]() (2021-01-01)
 > Deployed Release
 
 **`NOTE`** optionally add [#00]() pull request reference/link after scope.
@@ -55,6 +63,3 @@ Use this template and checklist to create new changelog entries.
 
 ### ❗️ Known Issues
 * **scope:** explanation of issue and plan to resolve
----
->© 2021 Amazon Web Services, Inc. or its affiliates. All Rights Reserved.
-This work is licensed under a Creative Commons Attribution 4.0 International License.
