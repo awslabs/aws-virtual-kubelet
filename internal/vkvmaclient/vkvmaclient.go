@@ -141,7 +141,7 @@ func (v *VkvmaClient) Connect(ctx context.Context) (*grpc.ClientConn, error) {
 
 	select {
 	case <-time.After(1 * time.Second):
-		klog.Fatalf("connecting to %v pending...(%v timeout)", dialAddr, timeout)
+		klog.Errorf("connecting to %v pending...(%v timeout)", dialAddr, timeout)
 	case <-ctx.Done():
 		err := ctx.Err()
 		connDuration := time.Since(connStart)

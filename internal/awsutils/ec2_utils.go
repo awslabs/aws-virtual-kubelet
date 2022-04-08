@@ -173,8 +173,8 @@ func GetInstanceStatusById(instanceId string, ec2Client EC2API) (status string, 
 }
 
 // CreateEC2 generates a new EC2 instance based upon the input values provided.
-func CreateEC2(ctx context.Context, pod *corev1.Pod, region string, userData string, presignBucket string, presignKey string) (string, error) {
-	ec2Client, err := NewEc2Client(region)
+func CreateEC2(ctx context.Context, pod *corev1.Pod, userData string, presignBucket string, presignKey string) (string, error) {
+	ec2Client, err := NewEc2Client()
 	if err != nil {
 		return "", err
 	}
@@ -239,7 +239,7 @@ func CreateEC2(ctx context.Context, pod *corev1.Pod, region string, userData str
 	return *resp.Instances[0].InstanceId, err
 }
 
-func TerminateEC2(ctx context.Context, instanceID string, region string) (string, error) {
+func TerminateEC2(ctx context.Context, instanceID string) (string, error) {
 	if instanceID == "" {
 		return "instance-id-not-set", nil
 	}
@@ -248,7 +248,7 @@ func TerminateEC2(ctx context.Context, instanceID string, region string) (string
 		InstanceIds: []string{instanceID},
 	}
 
-	ec2Client, err := NewEc2Client(region)
+	ec2Client, err := NewEc2Client()
 
 	resp, err := ec2Client.TerminateInstances(ctx, &terminateInstanceInput)
 	if err != nil {
@@ -294,8 +294,8 @@ func UpdateInstanceSecurityGroups(ctx context.Context, ec2Client EC2API, instanc
 }
 
 // GetPrivateIP gets private ip of the EC2 instance
-func GetPrivateIP(instanceID string, region string) (privateIp string, err error) {
-	ec2Client, err := NewEc2Client(region)
+func GetPrivateIP(instanceID string) (privateIp string, err error) {
+	ec2Client, err := NewEc2Client()
 	if err != nil {
 		return "", err
 	}

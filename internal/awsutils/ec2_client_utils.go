@@ -97,8 +97,8 @@ func EC2RunInstancesUtil(
 // Outputs:
 //  userdata: base 64 encoded string with presigned URL to download and initialize the bootstrap agent
 //  err: any error that might occur as part of attempting to generate UserData
-func GenerateVKVMUserData(ctx context.Context, region string, bootstrapS3Bucket string, bootstrapS3Key string, VMInit string, BootstrapAgent string) (userdata string, err error) {
-	s3api, err := NewS3Client(region)
+func GenerateVKVMUserData(ctx context.Context, bootstrapS3Bucket string, bootstrapS3Key string, VMInit string, BootstrapAgent string) (userdata string, err error) {
+	s3api, err := NewS3Client()
 	if err != nil {
 		return "", err
 	}

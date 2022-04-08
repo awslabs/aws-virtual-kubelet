@@ -12,10 +12,13 @@ package awsutils
 import (
 	"context"
 	"errors"
+	"net"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws/transport/http"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	vkconfig "github.com/aws/aws-virtual-kubelet/internal/config"
 	"k8s.io/klog"
 )
 
@@ -26,9 +29,17 @@ type Client struct {
 }
 
 // NewEc2Client creates a new AWS client in the given region.
-func NewEc2Client(region string) (*Client, error) {
+func NewEc2Client() (*Client, error) {
 	// Initialize client session configuration.
-	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion(region))
+	// See the following links for an explanation of the timeout options
+	// https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/custom-http/
+	// https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/retries-timeouts/
+	vkcfg := vkconfig.Config()
+	httpClient := http.NewBuildableClient().WithTimeout(time.Second * time.Duration(vkcfg.AWSClientTimeoutSeconds)).WithDialerOptions(func(d *net.Dialer) {
+		d.KeepAlive = -1
+		d.Timeout = time.Second * time.Duration(vkcfg.AWSClientDialerTimeoutSeconds)
+	})
+	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithHTTPClient(httpClient))
 	if err != nil {
 		klog.Fatalf("unable to load SDK config, %v", err)
 		return nil, errors.New("unable to find load SDK config : ")
