@@ -186,7 +186,7 @@ func TestFileLoader_validate(t *testing.T) {
 }
 
 // NOTE both validate functions above delegate logic to this function so most validation tests go here
-func Test_validate(t *testing.T) {
+func Test_validate(t *testing.T) 	{
 	type args struct {
 		pc *ProviderConfig
 	}
@@ -231,6 +231,7 @@ func Test_validate(t *testing.T) {
 							Subnets: []string{
 								"sg-badf005ba117ab1e5",
 							},
+							DesiredCount: 5,
 						},
 					},
 				},
