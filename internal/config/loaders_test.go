@@ -186,7 +186,7 @@ func TestFileLoader_validate(t *testing.T) {
 }
 
 // NOTE both validate functions above delegate logic to this function so most validation tests go here
-func Test_validate(t *testing.T) 	{
+func Test_validate(t *testing.T) {
 	type args struct {
 		pc *ProviderConfig
 	}
@@ -276,9 +276,9 @@ func Test_ValidateWarmpoolConfig(t *testing.T) {
 					WarmPoolConfig: []WarmPoolConfig{
 						{
 							DesiredCount: 5,
-							ImageID: "ami-12345",
+							ImageID:      "ami-12345",
 							InstanceType: "m5.large",
-							Subnets: []string{"subnet-12345"},
+							Subnets:      []string{"subnet-12345"},
 						},
 					},
 				},
@@ -293,9 +293,9 @@ func Test_ValidateWarmpoolConfig(t *testing.T) {
 					WarmPoolConfig: []WarmPoolConfig{
 						{
 							DesiredCount: 0,
-							ImageID: "ami-12345",
+							ImageID:      "ami-12345",
 							InstanceType: "m5.large",
-							Subnets: []string{"subnet-12345"},
+							Subnets:      []string{"subnet-12345"},
 						},
 					},
 				},
