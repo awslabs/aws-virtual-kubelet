@@ -3,6 +3,9 @@
 name: Validation
 on:
   push:
+    branches:
+      - main
+  pull_request:
 env:
   GO_VERSION_CONSTRAINT: '^1.17.2'
   GOPPROXY: direct  # match local / restricted environment by avoiding proxy
