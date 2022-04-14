@@ -10,6 +10,7 @@ Customer and either Amazon Web Services, Inc. or Amazon Web Services EMEA SARL o
 package config
 
 import (
+	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
@@ -252,6 +253,65 @@ func Test_validate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if err := validate(tt.args.pc); (err != nil) != tt.wantErr {
 				t.Errorf("validate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func Test_ValidateWarmpoolConfig(t *testing.T) {
+	type args struct {
+		pc *ProviderConfig
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "Valid desired count",
+			args: args{
+				pc: &ProviderConfig{
+					ManagementSubnet: ".",
+					WarmPoolConfig: []WarmPoolConfig{
+						{
+							DesiredCount: 5,
+							ImageID: "ami-12345",
+							InstanceType: "m5.large",
+							Subnets: []string{"subnet-12345"},
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "Invalid desired count",
+			args: args{
+				pc: &ProviderConfig{
+					ManagementSubnet: ".",
+					WarmPoolConfig: []WarmPoolConfig{
+						{
+							DesiredCount: 0,
+							ImageID: "ami-12345",
+							InstanceType: "m5.large",
+							Subnets: []string{"subnet-12345"},
+						},
+					},
+				},
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var errs []string
+			errs = validateWarmPoolConfig(tt.args.pc, errs)
+			if tt.wantErr {
+				assert.Equal(t, "WarmPoolConfig.DesiredCount can't be zero or negative[0]", errs[0])
+				assert.Equal(t, 1, len(errs))
+			} else {
+				assert.Equal(t, 0, len(errs))
 			}
 		})
 	}
