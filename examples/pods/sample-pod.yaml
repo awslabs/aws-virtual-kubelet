@@ -10,7 +10,7 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: hello
-  namespace: virtual-kubelet
+  namespace: default
   annotations:
     # All values below pertain to the pod EC2 instance
     compute.amazonaws.com/tags: '{"Name": "Virtual Kubelet Pod Instance"}'

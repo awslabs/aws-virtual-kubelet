@@ -66,8 +66,9 @@ func (a *applicationLifecycleServer) WatchApplicationHealth(
 	//go func() {
 	err := func() error {
 		log.Printf("Starting watch sending loop...")
+		rand.Seed(time.Now().UnixNano())
 		for {
-			sleepTime = rand.Intn(30)
+			sleepTime = rand.Intn(15)
 			log.Printf("Sleeping for %d seconds...", sleepTime)
 			time.Sleep(time.Duration(sleepTime) * time.Second)
 			appResponse = &pb.ApplicationHealthResponse{
