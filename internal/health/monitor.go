@@ -245,7 +245,7 @@ func (m *Monitor) startWatchLoop(ctx context.Context, wg *sync.WaitGroup, cfg co
 
 							// force gRPC to reconnect stream
 							stream = nil
-							break // exit stream switch
+							continue
 						}
 					}
 
@@ -302,7 +302,7 @@ func (m *Monitor) startWatchLoop(ctx context.Context, wg *sync.WaitGroup, cfg co
 
 							// force gRPC to reconnect stream
 							stream = nil
-							break // exit stream switch
+							continue
 						}
 					}
 

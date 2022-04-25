@@ -248,7 +248,6 @@ func (p *Ec2Provider) DeletePod(ctx context.Context, pod *corev1.Pod) error {
 				Message:    "EC2 Provider terminated container upon deletion",
 				FinishedAt: now,
 				Reason:     "ProviderPodContainerDeleted",
-				StartedAt:  pod.Status.ContainerStatuses[idx].State.Running.StartedAt,
 			},
 		}
 	}
