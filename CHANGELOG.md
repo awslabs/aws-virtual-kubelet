@@ -1,6 +1,6 @@
 # Changelog
 
-## [v0.5.3](https://github.com/awslabs/aws-virtual-kubelet/compare/05.2+opensource...0.5.3) (2022-05-10)
+## [v0.5.3](https://github.com/awslabs/aws-virtual-kubelet/compare/v0.5.2+opensource...v0.5.3) (2022-05-10)
 ### 🎉 Features
 * **health:** refactored health checks to use contexts for cancellation and goroutines more efficiently
 * **health:** removed EC2 checks from critical path to reduce API consumption (and chance of throttling)
