@@ -57,6 +57,3 @@ kubectl apply -f examples/pods/sample-pod.yaml
 
 #### Install Prometheus for Metrics
 https://docs.aws.amazon.com/eks/latest/userguide/prometheus.html#deploy-prometheus
----
->© 2021 Amazon Web Services, Inc. or its affiliates. All Rights Reserved.
-This work is licensed under a Creative Commons Attribution 4.0 International License.

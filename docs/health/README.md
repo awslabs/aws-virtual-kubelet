@@ -1,5 +1,13 @@
 # Objects (types) in this package
 
+
+- [ ] pull and update original content below
+
+## Features to document
+- custom check handler
+ 
+---
+
 **`TODO`** Add description/diagram of flow
 
 ## Summary
@@ -21,6 +29,8 @@ The `PodMonitor` creates and configures a set of monitors appropriate for monito
 
 ### `Monitor`
 A `Monitor` holds information about what is being monitored (`Subject`), the thing affected by monitoring states (`Resource`), and how to monitor it (initiating polling checks or receiving streaming watch results).  `MonitorState` and `Subject` types represent the monitor's state and subject (and _belong to_ a `Monitor`).  `Resource` is a generic type associated with a monitor for use when handling monitoring states. `Monitor`s track check failures and determine their state based on failure counts (vs. the configured failure threshold).  For watch-based monitors the remote system is expected to provide appropriate status information, which is mapped to a monitoring state by the watch implementation.
+
+
 
 A `Monitor`s `Dependency` member points to a _parent_ monitor.  This relationship indicates that the _parent_ must be _Healthy_ before the current monitor can be healthy[^1].  This allows remediation behavior to take efficient action when multiple monitors are _Unhealthy_.  For instance if an EC2 instance is unhealthy, it is unlikely that a service running on that instance will be healthy.
 

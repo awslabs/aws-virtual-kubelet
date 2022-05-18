@@ -1,4 +1,4 @@
-# High-Level Design
+# Software Architecture (High-Level Design)
 This document describes the overall design of the system, including the different components and purpose(s) they serve.  Scenarios describing various execution flows and how the system behaves are also covered.
 
 # Layers
@@ -50,16 +50,41 @@ It has been observed that when pods are running across multiple provider instanc
 
 If the behavior is reproducible, it's likely that scaling providers up won't "re-balance" the pods either.  This case should be tested as well to verify though.
 
-## Unrecoverable failures
-If a fatal error happens during handling of a PodLifecycle function call, the provider can return an error to Kubernetes (via the Virtual Kubelet library) which will trigger Kubernetes standard retry/failure behavior.  If, however, an unresolvable exception happens during normal operation then the provider can only update Pod (or Node) status and trigger the PodNotifier[^3].
-
-In the case where a pod cannot be launched successfully, the provider will destroy affected resources and attempt to retry indefinitely.  This may not be desirable though, in which case a maximum number of attempts could be added to the configuration (and behavior when that max is reached given some definition).
-
-Another interesting situation is one in which an EC2 instance is created but some problem keeps the application from starting successfully, then when the provider tries to delete the EC2 instance to retry pod creation it fails at the deletion step (i.e. if the EC2 credentials just expired).  This is another case in which the provider will retry indefinitely.
-
-There are most likely some failure scenarios where it's possible for a resource to become untracked (orphaned) and fall out of management.  A tag-based periodic sweep, using Kubernetes finalizers, and other options have surfaced in discussions.  These ideas need definition and detail to be actionable (and ideally test-cases that demonstrate the failure mode and can be used to verify solutions).
 
 
 [^1]: There are a few exceptions due to lack of functionality in the Virtual Kubelet library.
 [^2]: This is similar to the situation where a user tries the provider for a bit, then terminates the cluster without first deleting pods.  A cleanup script that searches for tags has been proposed as a way to handle this.
-[^3]: PodNotifier is a callback provided by the Virtual Kubelet library that notifies Kubernetes of pod status changes without waiting for Kubernetes to poll for status.
+
+
+`**TODO**` link to class diagram here
+
+type PodLifecycleHandler interface {
+// CreatePod takes a Kubernetes Pod and deploys it within the provider.
+CreatePod(ctx context.Context, pod *corev1.Pod) error
+
+	// UpdatePod takes a Kubernetes Pod and updates it within the provider.
+	UpdatePod(ctx context.Context, pod *corev1.Pod) error
+
+	// DeletePod takes a Kubernetes Pod and deletes it from the provider. Once a pod is deleted, the provider is
+	// expected to call the NotifyPods callback with a terminal pod status where all the containers are in a terminal
+	// state, as well as the pod. DeletePod may be called multiple times for the same pod.
+	DeletePod(ctx context.Context, pod *corev1.Pod) error
+
+	// GetPod retrieves a pod by name from the provider (can be cached).
+	// The Pod returned is expected to be immutable, and may be accessed
+	// concurrently outside of the calling goroutine. Therefore it is recommended
+	// to return a version after DeepCopy.
+	GetPod(ctx context.Context, namespace, name string) (*corev1.Pod, error)
+
+	// GetPodStatus retrieves the status of a pod by name from the provider.
+	// The PodStatus returned is expected to be immutable, and may be accessed
+	// concurrently outside of the calling goroutine. Therefore it is recommended
+	// to return a version after DeepCopy.
+	GetPodStatus(ctx context.Context, namespace, name string) (*corev1.PodStatus, error)
+
+	// GetPods retrieves a list of all pods running on the provider (can be cached).
+	// The Pods returned are expected to be immutable, and may be accessed
+	// concurrently outside of the calling goroutine. Therefore it is recommended
+	// to return a version after DeepCopy.
+	GetPods(context.Context) ([]*corev1.Pod, error)
+}
