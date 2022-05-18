@@ -192,7 +192,7 @@ func (m *Monitor) startWatchLoop(ctx context.Context, wg *sync.WaitGroup, cfg co
 		for {
 			// (re)obtain stream if needed
 			if stream == nil {
-				klog.InfoS("Connecting stream...", "monitor", m, "pod", klog.KObj(pod))
+				klog.InfoS("Connecting stream...", "monitor", m, "pod", klog.KObj(pod.DeepCopy()))
 				stream = m.getStream(ctx, m)
 			}
 
