@@ -1,5 +1,19 @@
 # Changelog
 
+## [v0.5.3](https://github.com/awslabs/aws-virtual-kubelet/compare/05.2+opensource...0.5.3) (2022-05-10)
+### 🎉 Features
+* **health:** refactored health checks to use contexts for cancellation and goroutines more efficiently
+* **health:** removed EC2 checks from critical path to reduce API consumption (and chance of throttling)
+* **tests:** increased coverage of health check code significantly
+
+### 🐛 Bug Fixes
+* **health:** goroutines no longer leak (this is enforced via WaitGroups)
+* **pod:** resolved a crash when updating state during pod stop operations
+
+### 🧹 Chores
+* **docs:** added high-level design draft (w/ known edge-cases)
+* **cleanup:** moved _generated_ mocks into a separate dir
+
 ## [v0.5.2+opensource]() (2022-04-06)
 ### 🎉 Features
 * **ec2:** changed EC2 API polling loop to use [Waiters](https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/making-requests.html#using-waiters)

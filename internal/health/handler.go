@@ -11,6 +11,7 @@ package health
 
 import (
 	"context"
+	"sync"
 
 	util "github.com/aws/aws-virtual-kubelet/internal/utils"
 
@@ -23,110 +24,89 @@ type Handler interface {
 }
 
 type CheckHandler struct {
-	in   chan *checkResult
-	done chan bool
+	// in receives a checkResult to process
+	in chan *checkResult
+	// IsReceiving is true if handler receiver is currently running
+	IsReceiving bool
 }
 
-func NewCheckHandler(notifier func(*corev1.Pod)) *CheckHandler {
+func NewCheckHandler() *CheckHandler {
 	in := make(chan *checkResult)
-	done := make(chan bool)
 	ch := &CheckHandler{
-		in:   in,
-		done: done,
+		in: in,
 	}
 
 	return ch
 }
 
-func (ch *CheckHandler) receive(ctx context.Context) {
-	// (in a goroutine) receive messages on in and forward to handleCheckResult
+func (ch *CheckHandler) receive(ctx context.Context, wg *sync.WaitGroup) {
+	ch.IsReceiving = true
+
+	wg.Add(1)
+
+	// (in a goroutine) receive messages on 'in' and forward to handleCheckResult
 	go func() {
+		// decrement the WaitGroup counter when the loop exits
+		defer wg.Done()
+
 		for {
 			select {
+			case <-ctx.Done():
+				ch.IsReceiving = false
+				klog.InfoS("Handler context cancelled...stopping")
+				return
 			case result := <-ch.in:
-				klog.InfoS("Received a checkResult to process", "monitor name", result.Monitor.Name,
+				klog.V(1).InfoS("Received a checkResult to process", "monitor name", result.Monitor.Name,
 					"failed?", result.Failed, "message", result.Message)
 				ch.handleCheckResult(ctx, result)
-			case <-ch.done:
-				klog.InfoS("Handler received 'done'...stopping")
-				return
 			}
 		}
 	}()
 }
 
 func (ch *CheckHandler) handleCheckResult(ctx context.Context, result *checkResult) {
-	klog.InfoS("Handling checkResult", "checkResult", result)
+	klog.V(1).InfoS("Handling checkResult", "checkResult", result)
 
 	monitor := result.Monitor
 	pod := monitor.Resource.(*corev1.Pod)
 
 	if result.Failed {
-		klog.InfoS("🟠️️ Check failure", "monitor", monitor.Name, "pod", klog.KObj(pod))
+		klog.V(1).InfoS("🟠️️ Check failure", "monitor", monitor.Name, "pod", klog.KObj(pod))
 	} else {
-		klog.InfoS("⚪️️ Check success", "monitor", monitor.Name, "pod", klog.KObj(pod))
+		klog.V(1).InfoS("⚪️️ Check success", "monitor", monitor.Name, "pod", klog.KObj(pod))
 	}
 
 	// decide how to handle check result
-	switch monitor.State {
+	switch monitor.getState() {
 	case MonitoringStateHealthy:
-		klog.InfoS("🟢 Monitor state is HEALTHY", "monitor", monitor.Name, "pod", klog.KObj(pod))
+		klog.V(1).InfoS("🟢 Monitor state is HEALTHY", "monitor", monitor.Name, "pod", klog.KObj(pod))
 
 	case MonitoringStateUnhealthy:
-		klog.InfoS("🔴 Monitor state is UNHEALTHY", "monitor", monitor.Name, "pod", klog.KObj(pod))
-		//get most upstream failing monitor and take steps based on it (may return the same failing monitor we have)
-		primaryFailure := monitor.GetRootFailure()
+		klog.V(1).InfoS("🔴 Monitor state is UNHEALTHY", "monitor", monitor.Name, "pod", klog.KObj(pod))
 
-		switch primaryFailure.Subject {
-		case SubjectEc2:
-			klog.InfoS("EC2 failure...", "pod", klog.KObj(pod))
-
-			// TODO add metrics here
-
-			err := util.ReplaceCompute(ctx, pod)
-			if err != nil {
-				panic("retry here instead")
-			}
+		switch monitor.Subject {
 		case SubjectVkvma:
-			klog.InfoS("VKVMA failure...", "pod", klog.KObj(pod))
+			klog.InfoS("VKVMA failure...", "monitor", monitor, "pod", klog.KObj(pod))
 			//p.deletePodSkipApp(ctx, pod)
 			//_ = p.CreatePod(ctx, pod)
 		case SubjectApp:
-			klog.InfoS("App failure...ignoring", "pod", klog.KObj(pod))
+			klog.InfoS("App failure...", "monitor", monitor, "pod", klog.KObj(pod))
 			//p.deletePodSkipApp(ctx, pod)
 			//_ = p.CreatePod(ctx, pod)
 		default:
-			klog.InfoS("Unknown health check subject...ignoring", "pod", klog.KObj(pod))
+			klog.InfoS("Unknown health check subject...ignoring", "monitor", monitor, "pod", klog.KObj(pod))
 		}
 
-	case MonitoringStateUnknown:
-		klog.InfoS("🔵 Monitor state is UNKNOWN", "monitor", monitor.Name, "pod", klog.KObj(pod))
-		//// get most upstream failing monitor and take steps based on it (may return the same failing monitor we have)
-		//rootFailure := monitor.GetRootFailure()
-		//
-		//switch rootFailure.Subject {
-		//case SubjectEc2:
-		//	// treat unknown EC2 failure as fatal and recreate (skipping any app communication as it's likely down)
-		//	p.deletePodSkipApp(ctx, pod)
-		//	_ = p.CreatePod(ctx, pod)
-		//case SubjectVkvma:
-		//	klog.InfoS("VKVMA state unknown...", "pod", klog.KObj(pod))
-		////	p.deletePodSkipApp(ctx, pod)
-		////	_ = p.CreatePod(ctx, pod)
-		//case SubjectApp:
-		//	klog.InfoS("App state unknown...", "pod", klog.KObj(pod))
-		////	p.deletePodSkipApp(ctx, pod)
-		////	_ = p.CreatePod(ctx, pod)
-		//default:
-		//	klog.InfoS("Unknown health check subject...ignoring", "pod", klog.KObj(pod))
-		//}
+		// NOTE it should not be possible to reach this condition because creation of CheckResult is required to get here,
+		//  which explicitly sets the monitoring state to Healthy or Unhealthy (Unknown is only valid before any checks run)
+		//case MonitoringStateUnknown:
 	}
 
 	if result.Data != nil {
-		klog.InfoS("Processing check data", "pod", klog.KObj(pod))
+		klog.V(1).InfoS("Processing check data", "pod", klog.KObj(pod))
 		if _, ok := result.Data.(*corev1.PodStatus); ok {
 			podStatus := result.Data.(*corev1.PodStatus)
-			klog.InfoS("Check data is a `PodStatus`")
+			klog.V(1).InfoS("Check data is a `PodStatus`")
 			klog.V(1).InfoS("`PodStatus` data contents", "PodStatus", podStatus)
 
 			// ensure IP fields are set to the correct values (agents likely won't/can't set these)
@@ -146,7 +126,7 @@ func (ch *CheckHandler) handleCheckResult(ctx context.Context, result *checkResu
 				klog.InfoS("⚠️  Unable to notify pod status (handler notifier func not set)", "pod", klog.KObj(pod))
 			}
 		} else {
-			klog.InfoS("Unknown check data...skipping processing", "data", result.Data)
+			klog.V(1).InfoS("Unknown check data...skipping processing", "data", result.Data)
 		}
 	}
 }
