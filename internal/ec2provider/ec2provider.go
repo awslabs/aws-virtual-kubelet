@@ -12,8 +12,11 @@ package ec2provider
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"os"
+	"runtime"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-virtual-kubelet/internal/vkvmaclient"
@@ -62,7 +65,7 @@ type Ec2Provider struct {
 	podNotifier        func(*corev1.Pod)
 	computeManager     *computeManager
 	podMonitor         *health.PodMonitor
-	checkHandler       *health.CheckHandler
+	defaultHandler     *health.CheckHandler
 	warmPool           *WarmPoolManager
 }
 
@@ -102,17 +105,18 @@ func NewEc2Provider(ctx context.Context, cfg provider.InitConfig, extCfg config.
 	}
 	p.warmPool.fillAndMaintain()
 
-	//p.warmPool, err = NewV2WarmPool(ctx, &p)
-
 	p.computeManager, err = NewComputeManager(ctx)
 	if err != nil {
 		panic("handle compute manager instantiation error")
 	}
 
-	p.checkHandler = health.NewCheckHandler(p.podNotifier)
+	p.defaultHandler = health.NewCheckHandler()
 
 	// start metrics endpoint
 	go metrics.ExposeMetrics()
+
+	// start status reporting loop
+	go p.statusLoop()
 
 	return &p, nil
 }
@@ -128,19 +132,23 @@ func (p *Ec2Provider) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 	klog.Infof("Received CreatePod request for pod %v(%v)", pod.Name, pod.Namespace)
 
 	// create (but don't start) pod monitor
-	podMonitor, err := health.NewPodMonitor(pod, p.checkHandler)
+	podMonitor, err := health.NewPodMonitor(pod, p.defaultHandler)
 	if err != nil {
 		klog.ErrorS(err, "Can't create pod monitor", "pod", klog.KObj(pod))
 		return err
 	}
 
+	podKey := utils.GetPodCacheKey(pod.Namespace, pod.Name)
+
 	// add pod to cache
 	metaPod := NewMetaPod(pod, podMonitor, p.podNotifier)
-	p.pods.Set(utils.GetPodCacheKey(pod.Namespace, pod.Name), metaPod)
+	p.pods.Set(podKey, metaPod)
 
 	// launch EC2
 	instanceID, privateIP, err := p.computeManager.GetCompute(ctx, p, pod)
 	if err != nil {
+		p.pods.Delete(podKey)
+
 		klog.ErrorS(err, "Error getting compute for pod", "pod", klog.KObj(pod))
 		return err
 	}
@@ -196,7 +204,7 @@ func (p *Ec2Provider) UpdatePod(ctx context.Context, pod *corev1.Pod) error {
 }
 
 func (p *Ec2Provider) DeletePod(ctx context.Context, pod *corev1.Pod) error {
-	klog.Infof("Received DeletePod request for pod %v(%v)", pod.Name, pod.Namespace)
+	klog.InfoS("Received DeletePod request", "pod", klog.KObj(pod))
 
 	podKey := utils.GetPodCacheKey(pod.Namespace, pod.Name)
 	metaPod := p.pods.Get(podKey)
@@ -225,11 +233,27 @@ func (p *Ec2Provider) DeletePod(ctx context.Context, pod *corev1.Pod) error {
 		return err
 	}
 
-	// notify k8s
-	p.notifyPodDelete(pod)
-
 	// delete from cache
 	p.pods.Delete(podKey)
+
+	now := metav1.Now()
+
+	pod.Status.Phase = corev1.PodSucceeded
+	pod.Status.Reason = "ProviderPodDeleted"
+
+	for idx := range pod.Status.ContainerStatuses {
+		pod.Status.ContainerStatuses[idx].Ready = false
+		pod.Status.ContainerStatuses[idx].State = corev1.ContainerState{
+			Terminated: &corev1.ContainerStateTerminated{
+				Message:    "EC2 Provider terminated container upon deletion",
+				FinishedAt: now,
+				Reason:     "ProviderPodContainerDeleted",
+			},
+		}
+	}
+
+	// notify k8s
+	p.notifyPodDelete(pod)
 
 	klog.InfoS("Pod deleted", "pod", klog.KObj(metaPod.pod))
 
@@ -241,6 +265,7 @@ func (p *Ec2Provider) GetPod(ctx context.Context, namespace, name string) (*core
 
 	metaPod := p.pods.Get(utils.GetPodCacheKey(namespace, name))
 	if metaPod == nil {
+		klog.InfoS("GetPod request for non-existent pod", "namespace", namespace, "name", name, "pods", p.pods)
 		return nil, errdefs.NotFoundf("Pod %v(%v) does not exist", name, namespace)
 	}
 	return metaPod.pod, nil
@@ -305,12 +330,10 @@ func (p *Ec2Provider) GetStatsSummary(ctx context.Context) (*statsv1alpha1.Summa
 
 func (p *Ec2Provider) launchApplication(
 	ctx context.Context, pod *corev1.Pod) (*vkvmagent_v0.LaunchApplicationResponse, error) {
-
 	cfg := config.Config()
 
 	var launchAppResp *vkvmagent_v0.LaunchApplicationResponse
 
-	// TODO(guicejg): 🚨 Get port from config
 	vkvmaClient := vkvmaclient.NewVkvmaClient(pod.Status.PodIP, cfg.VKVMAgentConnectionConfig.Port)
 
 	appClient, err := vkvmaClient.GetApplicationLifecycleClient(ctx)
@@ -359,8 +382,8 @@ func updateVerbosityLevel() {
 	}
 }
 
-func (p *Ec2Provider) deletePodSkipApp(ctx context.Context, pod *corev1.Pod) {
-	klog.InfoS("EC2 failure...recreating pod", "pod", klog.KObj(pod))
+func (p *Ec2Provider) recreatePod(ctx context.Context, pod *corev1.Pod) {
+	klog.InfoS("Recreating pod", "pod", klog.KObj(pod))
 
 	podKey := utils.GetPodCacheKey(pod.Namespace, pod.Name)
 	metaPod := p.pods.Get(podKey)
@@ -384,6 +407,9 @@ func (p *Ec2Provider) deletePodSkipApp(ctx context.Context, pod *corev1.Pod) {
 
 	// delete from cache
 	p.pods.Delete(podKey)
+
+	// TODO(guicejg): determine what to do with an error here
+	_ = p.CreatePod(ctx, pod)
 }
 
 // handlePodStatusUpdate is called by pod monitors to update pod status
@@ -401,7 +427,7 @@ func (p *Ec2Provider) stopPodMonitor(ctx context.Context, metaPod *MetaPod) erro
 	var err error
 
 	if metaPod != nil && metaPod.monitor != nil {
-		metaPod.monitor.Stop(ctx)
+		metaPod.monitor.Stop()
 	} else {
 		err = errors.New("metaPod or metaPod.monitor is nil")
 	}
@@ -462,7 +488,7 @@ func (p *Ec2Provider) PopulateCache(cache *PodCache) {
 		klog.Infof("Recreating pod monitor for pod %v(%v) (populated from cache)",
 			metaPod.pod.Name, metaPod.pod.Namespace)
 
-		handler := health.NewCheckHandler(p.podNotifier)
+		handler := health.NewCheckHandler()
 		metaPod.monitor, err = health.NewPodMonitor(metaPod.pod, handler)
 		if err != nil {
 			klog.Errorf("Can't create pod health monitor for pod %v(%v): %v",
@@ -472,4 +498,40 @@ func (p *Ec2Provider) PopulateCache(cache *PodCache) {
 	}
 
 	p.pods = cache
+}
+
+func (p *Ec2Provider) statusLoop() {
+	cfg := config.Config()
+
+	ticker := time.NewTicker(time.Duration(cfg.StatusIntervalSeconds) * time.Second)
+
+	var monitors map[string]string
+	var monitorStates []string
+	var message string
+	var numPods int
+
+	for range ticker.C {
+		if p.pods != nil {
+			numPods = 0
+			monitors = make(map[string]string)
+
+			// collect pod stats
+			for _, metaPod := range p.pods.GetList() {
+				// collect monitors for pod
+				for _, monitor := range metaPod.monitor.Monitors {
+					monitorStates = append(monitorStates, monitor.String())
+				}
+				monitors[metaPod.pod.Name] = strings.Join(monitorStates, ", ")
+				monitorStates = nil // reset monitorStates for next (meta)pod
+				numPods++
+			}
+		}
+
+		message = fmt.Sprintf("📣 Status (every %ds) "+
+			"•goroutines(global):%d "+
+			"•pods:%d "+
+			"•monitors:%v ",
+			cfg.StatusIntervalSeconds, runtime.NumGoroutine(), numPods, monitors)
+		klog.InfoS(message)
+	}
 }

@@ -44,6 +44,9 @@ func NewEc2Client() (*Client, error) {
 		klog.Fatalf("unable to load SDK config, %v", err)
 		return nil, errors.New("unable to find load SDK config : ")
 	}
+
+	cfg.Region = vkcfg.Region
+
 	// Create the AWS service client.
 	ec2Client := ec2.NewFromConfig(cfg)
 	var options = func(options *ec2.InstanceRunningWaiterOptions) {

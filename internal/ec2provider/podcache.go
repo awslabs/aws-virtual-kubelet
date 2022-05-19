@@ -23,13 +23,21 @@ import (
 
 type PodCache struct {
 	pods map[string]*MetaPod
-	lock sync.RWMutex
+	sync.RWMutex
+}
+
+func NewPodCache() *PodCache {
+	podCache := &PodCache{
+		pods: map[string]*MetaPod{},
+	}
+
+	return podCache
 }
 
 // GetList returns a list of Pods
 func (pc *PodCache) GetList() []*MetaPod {
-	pc.lock.RLock()
-	defer pc.lock.RUnlock()
+	pc.RLock()
+	defer pc.RUnlock()
 
 	var list []*MetaPod
 
@@ -42,8 +50,8 @@ func (pc *PodCache) GetList() []*MetaPod {
 
 // GetPodList returns a list of Pods
 func (pc *PodCache) GetPodList() []*corev1.Pod {
-	pc.lock.RLock()
-	defer pc.lock.RUnlock()
+	pc.RLock()
+	defer pc.RUnlock()
 
 	var podList []*corev1.Pod
 
@@ -56,15 +64,15 @@ func (pc *PodCache) GetPodList() []*corev1.Pod {
 
 // Get returns a value from the map given a key
 func (pc *PodCache) Get(key string) *MetaPod {
-	pc.lock.RLock()
-	defer pc.lock.RUnlock()
+	pc.RLock()
+	defer pc.RUnlock()
 	return pc.pods[key]
 }
 
 // Set updates the map element that has given key with the provided value
 func (pc *PodCache) Set(key string, val *MetaPod) {
-	pc.lock.Lock()
-	defer pc.lock.Unlock()
+	pc.Lock()
+	defer pc.Unlock()
 	pc.pods[key] = val
 }
 
@@ -84,28 +92,18 @@ func (pc *PodCache) UpdatePod(key string, pod *corev1.Pod) error {
 
 // Delete removes the map element with the given key
 func (pc *PodCache) Delete(key string) {
-	pc.lock.Lock()
-	defer pc.lock.Unlock()
+	pc.Lock()
+	defer pc.Unlock()
 	delete(pc.pods, key)
 }
 
-// CreateCacheFromPodList creates a new pod cache from a k8s PodList (empty if PodList is empty)
-func CreateCacheFromPodList(podList *corev1.PodList) *PodCache {
-	klog.InfoS("Rebuilding cache from pod list", "pods", len(podList.Items))
-
-	podCache := &PodCache{
-		pods: map[string]*MetaPod{},
-		lock: sync.RWMutex{},
-	}
-
+func (pc *PodCache) Populate(podList *corev1.PodList) {
 	for _, pod := range podList.Items {
 		klog.V(1).InfoS("Rehydrating pod for cache", "pod", klog.KObj(&pod), "annotations", &pod.Annotations)
 
 		metaPod := NewMetaPod(pod.DeepCopy(), nil, nil) // monitors for pods are created elsewhere
 
 		podKey := utils.GetPodCacheKey(pod.Namespace, pod.Name)
-		podCache.Set(podKey, metaPod)
+		pc.Set(podKey, metaPod)
 	}
-
-	return podCache
 }

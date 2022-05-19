@@ -11,176 +11,142 @@ package health
 
 import (
 	"context"
-	"time"
+	"sync"
+
+	health "github.com/aws/aws-virtual-kubelet/proto/grpc/health/v1"
+
+	"github.com/aws/aws-virtual-kubelet/internal/vkvmaclient"
+	vkvmagent_v0 "github.com/aws/aws-virtual-kubelet/proto/vkvmagent/v0"
+
+	//"github.com/aws/aws-virtual-kubelet/internal/vkvmaclient"
+	//mock_vkvmagent_v0 "github.com/aws/aws-virtual-kubelet/mocks/generated/vkvmagent/v0"
+	//vkvmagent_v0 "github.com/aws/aws-virtual-kubelet/proto/vkvmagent/v0"
 
 	"github.com/aws/aws-virtual-kubelet/internal/config"
 	corev1 "k8s.io/api/core/v1"
+
+	//v1 "k8s.io/api/core/v1"
 	"k8s.io/klog/v2"
 )
 
 type PodMonitor struct {
-	config       config.HealthConfig
-	pod          *corev1.Pod
-	handler      *CheckHandler
-	monitors     []*Monitor
-	isMonitoring bool
-	done         chan bool
+	Monitors []*Monitor
+
+	config    config.HealthConfig
+	pod       *corev1.Pod
+	handler   *CheckHandler
+	cancel    context.CancelFunc
+	waitGroup *sync.WaitGroup
+	//isMonitoring bool
 }
 
+// NewPodMonitor creates monitors appropriate for a pod. The CheckHandler passed in will have its `receive` method
+//  invoked to receive and process check results, unless a pod specifies a custom handler via pod annotation (in which
+//  case _that_ handler's `receive` will be called instead).
 func NewPodMonitor(pod *corev1.Pod, handler *CheckHandler) (*PodMonitor, error) {
-
 	cfg := config.Config().HealthConfig
 	klog.Infof("Pod Monitor loaded cfg %+v", cfg)
 
 	pm := &PodMonitor{
-		pod:     pod,
 		config:  cfg,
-		handler: handler,
+		pod:     pod,
+		handler: setPodHandler(pod, handler),
 	}
 
-	pm.configureMonitors()
+	pm.createMonitors()
 
 	return pm, nil
 }
 
-func (pm *PodMonitor) configureMonitors() {
-	// create monitors and dependencies (see docs/health/monitor.puml)
+// setPodHandler allows a pod to specify a different check handler than the default provided.
+func setPodHandler(pod *corev1.Pod, handler *CheckHandler) *CheckHandler {
+	// TODO(guicejg): check pod annotation for custom check handler and create / set accordingly if present and valid
+	return handler
+}
 
-	ec2StatusMonitor := NewMonitor(pm.pod, SubjectEc2, "ec2.status", checkEc2Status)
+func (pm *PodMonitor) createMonitors() {
+	// create VKVMAgent watcher
+	vkvmaWatchMonitor := NewMonitor(pm.pod, SubjectVkvma, "vkvma.watch", nil)
+	// connect handler's input channel to monitor
+	vkvmaWatchMonitor.handlerReceiver = pm.handler.in
+	vkvmaWatchMonitor.isWatcher = true
+	vkvmaWatchMonitor.getStream = func(ctx context.Context, m *Monitor) interface{} {
+		vc := vkvmaclient.NewVkvmaPodClient(pm.pod)
 
-	//vkvmaConnectMonitor := NewMonitor(pm.pod, SubjectVkvma, "vkvma.connect", checkVkvmaConnection)
-	//vkvmaConnectMonitor.Dependency = ec2StatusMonitor
-	//
-	//vkvmaHealthMonitor := NewMonitor(pm.pod, SubjectVkvma, "vkvma.health", checkVkvmaHealth)
-	//vkvmaHealthMonitor.Dependency = vkvmaConnectMonitor
-	//
-	//appHealthMonitor := NewMonitor(pm.pod, SubjectApp, "app.health", checkAppHealth)
-	//appHealthMonitor.Dependency = vkvmaHealthMonitor
+		hc, err := vc.GetHealthClient(ctx)
+		if err != nil {
+			klog.ErrorS(err, "Error getting Health client", "monitor", m, "pod", klog.KObj(pm.pod))
+			return nil
+		}
 
-	//create a (streaming) "watcher" monitor instead of a standard (polling) "checker" monitor like the above
-	appWatchMonitor := NewMonitor(pm.pod, SubjectApp, "app.monitor", nil)
-	appWatchMonitor.setWatcherFunc(watchAppHealth)
-	//appWatchMonitor.Dependency = vkvmaConnectMonitor
-	appWatchMonitor.Dependency = ec2StatusMonitor // connect directly to ec2 until intermediate monitors are re-enabled
+		stream, err := hc.Watch(ctx, &health.HealthCheckRequest{})
+		if err != nil {
+			klog.ErrorS(err, "Error calling Watch", "monitor", m, "pod", klog.KObj(pm.pod))
+			return nil
+		}
 
-	pm.monitors = []*Monitor{
-		ec2StatusMonitor,
-		//vkvmaConnectMonitor,
-		//vkvmaHealthMonitor,
-		//appHealthMonitor,
+		return stream
+	}
+
+	// create Application watcher
+	appWatchMonitor := NewMonitor(pm.pod, SubjectApp, "app.watch", nil)
+	// connect handler's input channel to monitor
+	appWatchMonitor.handlerReceiver = pm.handler.in
+	appWatchMonitor.isWatcher = true
+	appWatchMonitor.getStream = func(ctx context.Context, m *Monitor) interface{} {
+		vc := vkvmaclient.NewVkvmaPodClient(pm.pod)
+
+		alc, err := vc.GetApplicationLifecycleClient(ctx)
+		if err != nil {
+			klog.ErrorS(err, "Error getting Application Lifecycle client", "monitor", m, "pod", klog.KObj(pm.pod))
+			return nil
+		}
+
+		stream, err := alc.WatchApplicationHealth(ctx, &vkvmagent_v0.ApplicationHealthRequest{})
+		if err != nil {
+			klog.ErrorS(err, "Error calling WatchApplicationHealth", "monitor", m, "pod", klog.KObj(pm.pod))
+			return nil
+		}
+
+		return stream
+	}
+
+	pm.Monitors = []*Monitor{
+		vkvmaWatchMonitor,
 		appWatchMonitor,
 	}
 }
 
 func (pm *PodMonitor) Start(ctx context.Context) {
-	klog.Infof("Start pod monitor for pod %v(%v)", pm.pod.Name, pm.pod.Namespace)
+	klog.InfoS("Starting pod monitor", "pod", klog.KObj(pm.pod))
 
-	done := make(chan bool)
-	pm.done = done
+	// create cancellable context from passed-in context
+	pmCtx, cancel := context.WithCancel(ctx)
+	// save cancel function reference for later use when stopping monitors/handler
+	pm.cancel = cancel
 
-	go pm.monitorLoop(ctx, pm.done)
-	go pm.handler.receive(ctx)
-}
+	// create wait group to wait for monitor-related goroutine to stop
+	pm.waitGroup = &sync.WaitGroup{}
 
-func (pm *PodMonitor) monitorLoop(ctx context.Context, done chan bool) {
-	for {
-		klog.V(1).InfoS("Start of monitor loop", "pod", klog.KObj(pm.pod))
-		select {
-		case <-done:
-			klog.InfoS("Monitor loop terminated", "pod", klog.KObj(pm.pod))
-			pm.isMonitoring = false
-			klog.InfoS("Stopping handler receiver...", "pod", klog.KObj(pm.pod))
-			pm.handler.done <- true
-			return
-		default:
-			pm.isMonitoring = true
+	// start check handler's receiver
+	pm.handler.receive(pmCtx, pm.waitGroup)
 
-			klog.Infof("Checking %d monitors for pod %v(%v)",
-				len(pm.monitors), pm.pod.Name, pm.pod.Namespace)
-
-			var check *checkResult
-			var m *Monitor
-			var err error
-			for _, m = range pm.monitors {
-				if m.isWatcher {
-					klog.V(1).InfoS(
-						"Ensuring watch type monitor is running", "monitor", m.Name, "pod", klog.KObj(pm.pod))
-					// pm.background is a noop if the watcher has already been started
-					pm.background(ctx, m)
-				} else {
-					klog.InfoS(
-						"Running check type monitor check func", "monitor", m.Name, "pod", klog.KObj(pm.pod))
-					check = m.check(ctx, m)
-					if err != nil {
-						klog.Warningf("Premature failure checking monitor %+v: %v", m, err)
-					}
-
-					klog.InfoS(
-						"Monitor check completed...sending result to handler", "monitor", m.Name, "state", m.State,
-						"failed?", check.Failed, "resource", klog.KObj(m.Resource.(*corev1.Pod)))
-
-					pm.handler.in <- check
-				}
-			}
-
-			time.Sleep(time.Duration(pm.config.HealthCheckIntervalSeconds) * time.Second)
-		}
+	// start monitors
+	for _, m := range pm.Monitors {
+		m.Run(pmCtx, pm.waitGroup)
 	}
 }
 
-func (pm *PodMonitor) Stop(ctx context.Context) {
+func (pm *PodMonitor) Stop() {
 	klog.InfoS("Stopping pod monitor", "pod", klog.KObj(pm.pod))
 
-	klog.V(1).InfoS("Pod monitoring state", "monitoring", pm.isMonitoring)
-	if pm.isMonitoring {
-		var m *Monitor
+	// cancel the monitor(s)
+	pm.cancel()
 
-		// stop all monitors and mark state as Unknown
-		for _, m = range pm.monitors {
-			if m.isWatcher {
-				klog.V(1).InfoS("Stopping WATCH type monitor", "monitor",
-					m.Name, "pod", klog.KObj(pm.pod))
-				m.watcher.done <- true
-				m.watcher.isWatching = false
-				klog.V(1).InfoS("Sent DONE to watcher channel",
-					"monitor", m.Name, "watcher", m.watcher)
-			} else {
-				klog.V(1).InfoS("Stopping CHECK type monitor", "monitor",
-					m.Name, "pod", klog.KObj(pm.pod))
-			}
+	// TODO(guicejg): add a timeout to this wait? (if the goroutines don't exit from cancel() we can't cancel them
+	//  any other way, but we could at least WARN and/or emit a metric)
+	// wait for all goroutines to exit
+	pm.waitGroup.Wait()
 
-			m.resetFailures()
-			m.State = MonitoringStateUnknown
-		}
-
-		// stop monitoring main loop
-		klog.InfoS("Sending DONE to pod monitoring goroutine", "pod", klog.KObj(pm.pod))
-		pm.done <- true
-		klog.InfoS("Sent DONE to pod monitoring goroutine", "pod", klog.KObj(pm.pod))
-	}
-}
-
-func (pm *PodMonitor) background(ctx context.Context, m *Monitor) {
-
-	if m.watcher.isWatching {
-		klog.V(1).InfoS("Ignoring request to start watch-based monitor goroutine (already watching)")
-		return // already watching in the background
-	} else {
-		klog.V(1).InfoS("Starting watch-based monitor goroutine")
-	}
-
-	m.watcher.done = make(chan bool)
-
-	go func() {
-		for {
-			// a watch type monitor function starts in a goroutine that checks `done` to know when to stop working and
-			//  sends results directly to the check handler
-			err := m.watcher.watch(ctx, m, pm.handler)
-			if err != nil {
-				klog.ErrorS(err, "Can't start watcher", "monitor", m, "pod", klog.KObj(pm.pod))
-			}
-
-			klog.V(1).InfoS("Watcher function returned...awaiting restart", "pod", klog.KObj(m.Resource.(*corev1.Pod)))
-		}
-	}()
+	klog.InfoS("All monitors cancelled", "pod", klog.KObj(pm.pod))
 }
