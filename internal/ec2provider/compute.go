@@ -142,6 +142,9 @@ func (c *computeManager) createCompute(ctx context.Context, pod *corev1.Pod) (st
 		cfg.BootstrapAgent.InitData,
 	)
 
+	// TODO(guicejg): 🚨 UNDO temporary replacement of user data with startup script
+	finalUserData = awsutils.EncodeUserData(cfg.VMConfig.InitData)
+
 	instanceID, err := awsutils.CreateEC2(
 		ctx,
 		pod,
