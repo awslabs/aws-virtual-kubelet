@@ -16,7 +16,7 @@ Nodes are represented by [ENIs](https://docs.aws.amazon.com/AWSEC2/latest/UserGu
 
 ![](docs/img/vk.png)
 
-See [Software Architecture](docs/SoftwareArchitecture.md) for details about the code and how it's organized.
+See [Software Architecture](docs/SoftwareArchitecture.md) for an overview of the code organization and general behavior.  For detailed coverage of specific aspects of system/code behavior, see [implemented RFCs](docs/rfcs/implemented).
 
 ### Components
 <dl>
@@ -56,11 +56,7 @@ Some commands utilize the AWS CLI.  See the [AWS CLI](https://aws.amazon.com/cli
 EKS is _strongly_ recommended, though any k8s cluster with sufficient access to make AWS API calls and communicate over the network with gRPC agents _could_ work.
 
 ## Infrastructure QuickStart
-To get the needed infrastructure up and running quickly, see this [README](deploy/vkstack/README.md) which details using the [AWS CDK](https://aws.amazon.com/cdk/) Infrastructure-as-Code framework to automatically provision the required resources.
-
-### Other configurations
-
-For local development or testing setup see [Dev Setup](docs/DevSetup.md).
+To get the needed infrastructure up and running quickly, see the deploy [README](deploy/vkstack/README.md) which details using the [AWS CDK](https://aws.amazon.com/cdk/) Infrastructure-as-Code framework to automatically provision the required resources.
 
 ## Build
 Once the required infrastructure is in place, follow the steps in this section to build the VK provider.
@@ -113,6 +109,8 @@ At this point you should have at least one running VK provider pod running succe
 1. Copy the desired pod example(s) to `./local`
     2. Run `kubectl apply -f <filename>` (replacing `<filename>` with the actual file name).
 
+See the [Cookbook](docs/Cookbook.md) for more usage examples.
+
 ## Frequently Asked Questions
 ### Why does this project exist?
 This project serves as a translation and mediation layer between Kubernetes and EC2-based pods.  It was created in order to run custom workloads directly on any EC2 instance type/size available via AWS (e.g. [Mac Instances](https://aws.amazon.com/ec2/instance-types/mac/)).
@@ -125,7 +123,12 @@ This project serves as a translation and mediation layer between Kubernetes and 
 Take a look at the [`good first issue` Issues](https://github.com/awslabs/aws-virtual-kubelet/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22).  Read the [CONTRIBUTING](docs/Contributing.md) guidelines and submit a Pull Request! 🚀
 
 ### Are there any known issues and/or planned features or improvements?
-Yes.  See [RFCs](docs/rfcs) which cover both cases.
+Yes. See [RFCs](docs/rfcs/README.md) for improvement proposals and [EdgeCases](docs/EdgeCases.md) for known issues / workarounds.
+
+[BacklogFodder](docs/BacklogFodder.md) contains additional items that may become roadmap elements.
+
+### Are there metrics I can use to monitor system state / behavior?
+Yes.  See [Metrics](docs/Metrics.md) for details.
 
 ## Security
 See [CONTRIBUTING](docs/Contributing.md#security-issue-notifications) for more information.

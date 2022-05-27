@@ -64,7 +64,7 @@ As part of managing the EC2 instance resource lifecycle, the VK provider should 
 
 Pod names aren't guaranteed to be unique over time or across namespaces.  To prevent the case where an EC2 instance is detected as belonging to a current pod because it shares the name of a previous pod, the pod [UID](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids) should be used as the value for this tag.
 
-In the case where an instance has been launched, but not associated with a pod (e.g. [Warm Pool](../WarmPoolDesign.md)), the Tag key _should not be present_.  A server-side EC2 API filter `NotTagged` can be used to query instances that do not have the `PodUid` tag key (i.e. are not associated with a launched pod).  Combined with other tag queries that describe the instance state with respect to Warm Pool, such a query can uniquely categorize every instance's state.
+In the case where an instance has been launched, but not associated with a pod (e.g. [Warm Pool](implemented/WarmPoolDesign.md)), the Tag key _should not be present_.  A server-side EC2 API filter `NotTagged` can be used to query instances that do not have the `PodUid` tag key (i.e. are not associated with a launched pod).  Combined with other tag queries that describe the instance state with respect to Warm Pool, such a query can uniquely categorize every instance's state.
 
 When an instance is either created or associated with a pod, the tag key `PodUid` should be set to the value of the actual pod UID.
 
