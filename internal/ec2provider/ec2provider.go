@@ -221,15 +221,15 @@ func (p *Ec2Provider) DeletePod(ctx context.Context, pod *corev1.Pod) error {
 	// terminate application
 	err = p.terminateApp(ctx, metaPod)
 	if err != nil {
-		klog.ErrorS(err, "Could not terminate application", "pod", klog.KObj(metaPod.pod))
+		klog.InfoS(
+			"⚠️  Could not terminate application...proceeding with EC2 termination", "pod", klog.KObj(metaPod.pod))
 		metrics.TerminateApplicationErrors.Inc()
-		return err
 	}
 
 	// terminate EC2
 	err = p.computeManager.DeleteCompute(ctx, p, pod)
 	if err != nil {
-		klog.Errorf("Error deleting compute: %v", err)
+		klog.ErrorS(err, "Could not terminate EC2", "pod", klog.KObj(metaPod.pod))
 		return err
 	}
 
