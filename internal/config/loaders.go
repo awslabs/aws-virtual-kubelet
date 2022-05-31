@@ -107,6 +107,9 @@ func validateWarmPoolConfig(pc *ProviderConfig, errs []string) []string {
 			if len(wpc.Subnets) == 0 {
 				errs = append(errs, fmt.Sprintf("WarmPoolConfig.Subnets can't be empty for WarmPoolConfig[%d]", i))
 			}
+			if wpc.DesiredCount <= 0 {
+				errs = append(errs, fmt.Sprintf("WarmPoolConfig.DesiredCount can't be zero or negative[%d]", i))
+			}
 		}
 	}
 	return errs
