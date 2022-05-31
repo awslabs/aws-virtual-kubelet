@@ -104,7 +104,9 @@ This configuration will deploy a set of VK providers using the docker image buil
 ## Usage
 At this point you should have at least one running VK provider pod running successfully.  This section describes how to launch EC2-backed pods using the provider.
 
-[examples/pods](examples/pods) contains both a single (unmanaged) pod example as well as a pod [Deployment](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/).
+[examples/pods](examples/pods) contains both a single (unmanaged) pod example and a pod [Deployment](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/) example.
+
+**`NOTE`** It is _strongly_ recommended that workload pods run via a supervisory management construct such as a Deployment (even for single-instance pods).  This will help minimize unexpected loss of pod resources and allow Kubernetes to efficiently use resources.
 
 1. Copy the desired pod example(s) to `./local`
     2. Run `kubectl apply -f <filename>` (replacing `<filename>` with the actual file name).
