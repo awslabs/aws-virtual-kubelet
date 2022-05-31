@@ -24,13 +24,13 @@ VK_CMD_DIR = cmd/virtual-kubelet
 
 VKVMA_API_DIR = api/vkvmagent/v0
 VKVMA_PROTO_DIR = proto/vkvmagent/v0
-VKVMA_MOCKS_DIR = mocks/vkvmagent/v0
+VKVMA_MOCKS_DIR = mocks/generated/vkvmagent/v0
 VKVMA_PROTO_FILES = $(addprefix $(VKVMA_PROTO_DIR)/, application_lifecycle.pb.go bootstrap.pb.go application_lifecycle_grpc.pb.go bootstrap_grpc.pb.go)
 VKVMA_MOCKS_FILES = $(addprefix $(VKVMA_MOCKS_DIR)/, mock_application_lifecycle_grpc.pb.go mock_bootstrap_grpc.pb.go)
 
 GRPC_API_DIR = api/grpc/health/v1
 GRPC_PROTO_DIR = proto/grpc/health/v1
-GRPC_MOCKS_DIR = mocks/grpc/health/v1
+GRPC_MOCKS_DIR = mocks/generated/grpc/health/v1
 GRPC_PROTO_FILES = $(addprefix $(GRPC_PROTO_DIR)/, health.pb.go health_grpc.pb.go)
 GRPC_MOCKS_FILES = $(addprefix $(GRPC_MOCKS_DIR)/, mock_health_grpc.pb.go)
 
@@ -52,7 +52,7 @@ help:
 
 # clean build and generated paths/files
 .PHONY: clean
-clean: files := bin/virtual-kubelet proto/* mocks/*
+clean: files := bin/virtual-kubelet proto/* mocks/generated/*
 clean:
 	@rm -r $(files) &>/dev/null || exit 0
 
@@ -93,7 +93,7 @@ test: $(VKVMA_MOCKS_FILES) $(GRPC_MOCKS_FILES)
 
 
 IMAGE?=$(REGISTRY_ID).dkr.ecr.$(REGION).amazonaws.com/$(IMAGE_NAME)
-TAG?=$(shell git describe --tags --always --dirty="-dev")
+TAG?=$(shell git describe --tags --always --dirty="-dev" | sed 's/+/-/g')
 
 .PHONY: docker
 docker: 

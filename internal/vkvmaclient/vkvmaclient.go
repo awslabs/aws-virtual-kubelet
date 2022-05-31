@@ -14,6 +14,12 @@ import (
 	"fmt"
 	"time"
 
+	"google.golang.org/grpc/keepalive"
+
+	"k8s.io/klog/v2"
+
+	corev1 "k8s.io/api/core/v1"
+
 	"github.com/aws/aws-virtual-kubelet/internal/config"
 
 	vkvmagent "github.com/aws/aws-virtual-kubelet/proto/vkvmagent/v0"
@@ -25,8 +31,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/backoff"
 	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/keepalive"
-	"k8s.io/klog"
 )
 
 type GrpcClient interface {
@@ -50,6 +54,9 @@ type VkvmaConnection struct {
 	serviceConfig string
 }
 
+// TODO(guicejg): make this private and prefer the pod-based one below? (consider how this affects unit tests)
+
+// NewVkvmaClient creates a new VKVMAgent client for an ip:port
 func NewVkvmaClient(ip string, port int) *VkvmaClient {
 	cfg := config.Config().VKVMAgentConnectionConfig
 	klog.Infof("VKVMA Client loaded cfg %+v", cfg)
@@ -66,6 +73,14 @@ func NewVkvmaClient(ip string, port int) *VkvmaClient {
 	}
 }
 
+// NewVkvmaPodClient is a helper function to get a VKVMAgent client for a given pod
+func NewVkvmaPodClient(pod *corev1.Pod) *VkvmaClient {
+	klog.InfoS("Creating New VKVMA client for pod", "pod", klog.KObj(pod))
+	cfg := config.Config().VKVMAgentConnectionConfig
+
+	return NewVkvmaClient(pod.Status.PodIP, cfg.Port)
+}
+
 func (v *VkvmaClient) GetHealthClient(ctx context.Context) (health.HealthClient, error) {
 	// attempt to connect VKVMA if not already connected
 	if !v.IsConnected(ctx) {
@@ -74,6 +89,7 @@ func (v *VkvmaClient) GetHealthClient(ctx context.Context) (health.HealthClient,
 			return nil, err
 		}
 	}
+	klog.InfoS("Getting Health client")
 	v.HealthClient = health.NewHealthClient(v.VkvmaConnection.connection)
 	return v.HealthClient, nil
 }
@@ -86,6 +102,7 @@ func (v *VkvmaClient) GetApplicationLifecycleClient(ctx context.Context) (vkvmag
 			return nil, err
 		}
 	}
+	klog.InfoS("Getting Application Lifecycle client")
 	v.ApplicationLifecycleClient = vkvmagent.NewApplicationLifecycleClient(v.VkvmaConnection.connection)
 	return v.ApplicationLifecycleClient, nil
 }
@@ -99,15 +116,15 @@ func (v *VkvmaClient) IsConnected(ctx context.Context) bool {
 }
 
 func (v *VkvmaClient) Connect(ctx context.Context) (*grpc.ClientConn, error) {
+	dialAddr := fmt.Sprintf("%v:%v", v.address, v.port)
+
+	klog.Infof("initiating gRPC connection to %v", dialAddr)
+
 	timeout := time.Duration(v.config.TimeoutSeconds) * time.Second
 
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 
 	defer cancel()
-
-	dialAddr := fmt.Sprintf("%v:%v", v.address, v.port)
-
-	klog.Infof("initiating gRPC connection to %v", dialAddr)
 
 	connStart := time.Now()
 
@@ -130,13 +147,20 @@ func (v *VkvmaClient) Connect(ctx context.Context) (*grpc.ClientConn, error) {
 		//PermitWithoutStream: true,
 	}
 
-	conn, err := grpc.DialContext(
-		ctx,
-		dialAddr,
+	opts := []grpc.DialOption{
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithBlock(),
 		grpc.WithConnectParams(connectParams),
-		grpc.WithKeepaliveParams(clientParams),
+	}
+
+	if v.config.KeepaliveEnabled {
+		opts = append(opts, grpc.WithKeepaliveParams(clientParams))
+	}
+
+	conn, err := grpc.DialContext(
+		ctx,
+		dialAddr,
+		opts...,
 	)
 
 	select {

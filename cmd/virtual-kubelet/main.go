@@ -109,7 +109,10 @@ func main() {
 			if err != nil {
 				return err
 			}
-			podCache := ec2provider.CreateCacheFromPodList(podList)
+			podCache := ec2provider.NewPodCache()
+			// populate pod cache from k8s pod list
+			podCache.Populate(podList)
+			// update provider so it starts with the cache pre-loaded (before k8s asks us for it)
 			p.PopulateCache(podCache)
 
 			// warn users if we have overridden a custom node name provided via CLI

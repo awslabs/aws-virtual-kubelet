@@ -30,12 +30,14 @@ type ProviderConfig struct {
 	Region string `default:"us-west-2"`
 	// Name of the cluster used to tag ENIs (nodes)
 	ClusterName string `default:"aws-virtual-kubelet"`
-	// Subnet used for... TODO describe how this is used
+	// Subnet in which the ENI representing a k8s "node" is created
 	ManagementSubnet string
 	// AWS client overall timeout (from request to response)
-	AWSClientTimeoutSeconds int `default:"10"`
+	AWSClientTimeoutSeconds int `default:"30"`
 	// AWS client connection timeout (set explicitly to enable faster retries within the overall timeout)
-	AWSClientDialerTimeoutSeconds int `default:"2"`
+	AWSClientDialerTimeoutSeconds int `default:"5"`
+	// Displays a status message in the log every interval
+	StatusIntervalSeconds int `default:"15"`
 
 	HealthConfig              HealthConfig
 	VKVMAgentConnectionConfig VkvmaConfig
@@ -88,10 +90,10 @@ type WarmPoolConfig struct {
 type HealthConfig struct {
 	// Consecutive failure results required before reporting unhealthy status back to provider
 	UnhealthyThresholdCount int `default:"5"`
-	// [UNUSED] maximum failure results before forcing provider to take action
-	UnhealthyMaxCount int `default:"30"`
 	// Frequency to conduct "active" (polling) health checks at
 	HealthCheckIntervalSeconds int `default:"60"`
+	// Retry interval for streaming based RPCs
+	StreamRetryIntervalSeconds int `default:"10"`
 }
 
 // VkvmaConfig contains VKVMAgent connection and related settings
@@ -114,7 +116,9 @@ type VkvmaConfig struct {
 		// MaxDelay is the upper bound of backoff delay.
 		MaxDelaySeconds int `default:"120"`
 	}
-	Keepalive struct {
+	// Enable gRPC keep alive pings? (disabling resolves "too_many_pings:ENHANCE_YOUR_CALM" error in some cases)
+	KeepaliveEnabled bool `default:"false"`
+	Keepalive        struct {
 		// After a duration of this time if the client doesn't see any activity it
 		// pings the server to see if the transport is still alive.
 		// If set below 10s, a minimum value of 10s will be used instead.
