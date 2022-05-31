@@ -30,6 +30,7 @@ type CheckHandler struct {
 	IsReceiving bool
 }
 
+// NewCheckHandler creates a new check handler instance
 func NewCheckHandler() *CheckHandler {
 	in := make(chan *checkResult)
 	ch := &CheckHandler{
@@ -39,6 +40,7 @@ func NewCheckHandler() *CheckHandler {
 	return ch
 }
 
+// receive starts a goroutine to receive and process check results
 func (ch *CheckHandler) receive(ctx context.Context, wg *sync.WaitGroup) {
 	ch.IsReceiving = true
 
@@ -64,6 +66,7 @@ func (ch *CheckHandler) receive(ctx context.Context, wg *sync.WaitGroup) {
 	}()
 }
 
+// handleCheckResults determines what behavior(s) to perform based on check results received and monitor state
 func (ch *CheckHandler) handleCheckResult(ctx context.Context, result *checkResult) {
 	klog.V(1).InfoS("Handling checkResult", "checkResult", result)
 
@@ -87,19 +90,11 @@ func (ch *CheckHandler) handleCheckResult(ctx context.Context, result *checkResu
 		switch monitor.Subject {
 		case SubjectVkvma:
 			klog.InfoS("VKVMA failure...", "monitor", monitor, "pod", klog.KObj(pod))
-			//p.deletePodSkipApp(ctx, pod)
-			//_ = p.CreatePod(ctx, pod)
 		case SubjectApp:
 			klog.InfoS("App failure...", "monitor", monitor, "pod", klog.KObj(pod))
-			//p.deletePodSkipApp(ctx, pod)
-			//_ = p.CreatePod(ctx, pod)
 		default:
 			klog.InfoS("Unknown health check subject...ignoring", "monitor", monitor, "pod", klog.KObj(pod))
 		}
-
-		// NOTE it should not be possible to reach this condition because creation of CheckResult is required to get here,
-		//  which explicitly sets the monitoring state to Healthy or Unhealthy (Unknown is only valid before any checks run)
-		//case MonitoringStateUnknown:
 	}
 
 	if result.Data != nil {

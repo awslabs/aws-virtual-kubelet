@@ -1,0 +1,363 @@
+@startuml
+' NOTE this file is the combination of generated PlantUML files using https://github.com/jfeliu007/goplantuml
+'  The `img/ClassDiagram.png` file is generated from this source file (regenerate following any updates)
+namespace ec2provider {
+    interface ComputeManager  {
+        + GetCompute(ctx context.Context, pod *v1.Pod) (string, string, error)
+
+    }
+    class Ec2Info << (S,Aquamarine) >> {
+        + InstanceID string
+        + PrivateIP string
+        + IAMProfile string
+        + SecurityGroups []string
+        + RetryCount int
+
+    }
+    class Ec2Provider << (S,Aquamarine) >> {
+        - rm *manager.ResourceManager
+        - internalIP string
+        - daemonEndpointPort int32
+        - pods *PodCache
+        - startTime time.Time
+        - podNotifier <font color=blue>func</font>(*v1.Pod)
+        - computeManager *computeManager
+        - podMonitor *health.PodMonitor
+        - defaultHandler *health.CheckHandler
+        - warmPool *WarmPoolManager
+
+        + NodeName string
+        + EniNode *EniNode
+
+        - launchApplication(ctx context.Context, pod *v1.Pod) (*v0.LaunchApplicationResponse, error)
+        - recreatePod(ctx context.Context, pod *v1.Pod)
+        - handlePodStatusUpdate(ctx context.Context, pod *v1.Pod, podStatus v1.PodStatus) error
+        - stopPodMonitor(ctx context.Context, metaPod *MetaPod) error
+        - terminateApp(ctx context.Context, metaPod *MetaPod) error
+        - notifyPodDelete(pod *v1.Pod)
+        - statusLoop()
+
+        + CreatePod(ctx context.Context, pod *v1.Pod) error
+        + UpdatePod(ctx context.Context, pod *v1.Pod) error
+        + DeletePod(ctx context.Context, pod *v1.Pod) error
+        + GetPod(ctx context.Context, namespace string, name string) (*v1.Pod, error)
+        + GetPodStatus(ctx context.Context, namespace string, name string) (*v1.PodStatus, error)
+        + GetPods(ctx context.Context) ([]*v1.Pod, error)
+        + NotifyPods(ctx context.Context, f <font color=blue>func</font>(*v1.Pod) )
+        + ConfigureNode(ctx context.Context, node *v1.Node)
+        + GetContainerLogs(ctx context.Context, namespace string, podName string, containerName string, opts api.ContainerLogOpts) (io.ReadCloser, error)
+        + RunInContainer(ctx context.Context, namespace string, podName string, containerName string, cmd []string, attach api.AttachIO) error
+        + GetStatsSummary(ctx context.Context) (*statsv1alpha1.Summary, error)
+        + PopulateCache(cache *PodCache)
+
+    }
+    class EniNode << (S,Aquamarine) >> {
+        - name string
+        - hostname string
+        - lastTransitionTime time.Time
+
+        + Configure(ctx context.Context, k8sNode *v1.Node) (*v1.Node, error)
+        + Ping(ctx context.Context) error
+        + NotifyNodeStatus(ctx context.Context, cb <font color=blue>func</font>(*v1.Node) )
+
+    }
+    class MetaPod << (S,Aquamarine) >> {
+        - pod *v1.Pod
+        - monitor *health.PodMonitor
+        - notifier <font color=blue>func</font>(*v1.Pod)
+
+    }
+    class PodCache << (S,Aquamarine) >> {
+        - pods <font color=blue>map</font>[string]*MetaPod
+
+        + GetList() []*MetaPod
+        + GetPodList() []*v1.Pod
+        + Get(key string) *MetaPod
+        + Set(key string, val *MetaPod)
+        + UpdatePod(key string, pod *v1.Pod) error
+        + Delete(key string)
+        + Populate(podList *v1.PodList)
+
+    }
+    class State << (S,Aquamarine) >> {
+        + ReadyEC2 <font color=blue>map</font>[string]Ec2Info
+        + ProvisioningEC2 <font color=blue>map</font>[string]Ec2Info
+        + UnhealthyEC2 <font color=blue>map</font>[string]Ec2Info
+        + AllocatedEC2 <font color=blue>map</font>[string]Ec2Info
+
+    }
+    class WarmPoolManager << (S,Aquamarine) >> {
+        - config []config.WarmPoolConfig
+        - provider *Ec2Provider
+        - ec2Client *awsutils.Client
+
+        - fillAndMaintain()
+        - populateEC2Tags(reason string, pod v1.Pod) []types.TagSpecification
+        - createWarmEC2(ctx context.Context, wpCfg config.WarmPoolConfig) error
+        - updateEC2Tags(ctx context.Context, instanceID string, reason string, pod v1.Pod) error
+        - checkEC2TagsForState(ctx context.Context, input *ec2.DescribeInstancesInput)
+
+        + InitialWarmPoolCreation()
+        + CreateWarmEC2(ctx context.Context, wpConfig config.WarmPoolConfig, tags []types.TagSpecification) (string, string, string, []string, error)
+        + CheckWarmPoolDepth(ctx context.Context, wpc config.WarmPoolConfig)
+        + SetNodeName(node string)
+        + RefreshWarmPoolFromEC2(ctx context.Context)
+        + GetWarmPoolInstanceIfExist(ctx context.Context) (string, string, bool)
+        + TerminateInstance(ctx context.Context, instanceID string) (string, error)
+
+    }
+    class computeManager << (S,Aquamarine) >> {
+        - ec2Client *awsutils.Client
+
+        - podHasInstance(ctx context.Context, pod *v1.Pod) bool
+        - createCompute(ctx context.Context, pod *v1.Pod) (string, string, error)
+        - deleteCompute(ctx context.Context, pod *v1.Pod) error
+
+        + GetCompute(ctx context.Context, p *Ec2Provider, pod *v1.Pod) (string, string, error)
+        + DeleteCompute(ctx context.Context, p *Ec2Provider, pod *v1.Pod) error
+
+    }
+}
+
+namespace k8sutils {
+    interface K8SAPI  {
+        + GetPods(ctx context.Context, nodeName string) (*v1.PodList, error)
+        + GetPod(ctx context.Context, namespace string, podName string) (*v1.Pod, error)
+        + DeletePod(ctx context.Context, namespace string, podName string) error
+
+    }
+    class k8sClient << (S,Aquamarine) >> {
+        + Svc v1.CoreV1Interface
+
+        + GetPods(ctx context.Context, nodeName string) (*v1.PodList, error)
+        + GetPod(ctx context.Context, namespace string, podName string) (*v1.Pod, error)
+        + DeletePod(ctx context.Context, namespace string, podName string) error
+
+    }
+}
+
+"k8sutils.K8SAPI" <|-- "k8sutils.k8sClient"
+
+namespace health {
+    class CheckHandler << (S,Aquamarine) >> {
+        - in <font color=blue>chan</font> *checkResult
+
+        + IsReceiving bool
+
+        - receive(ctx context.Context, wg *sync.WaitGroup)
+        - handleCheckResult(ctx context.Context, result *checkResult)
+
+    }
+    interface Handler  {
+        - receive(ctx context.Context, in <font color=blue>chan</font> <font color=blue>interface</font>{})
+
+    }
+    class Monitor << (S,Aquamarine) >> {
+        - check <font color=blue>func</font>(context.Context, *Monitor) *checkResult
+        - isWatcher bool
+        - getStream <font color=blue>func</font>(context.Context, *Monitor) <font color=blue>interface</font>{}
+        - handlerReceiver <font color=blue>chan</font> *checkResult
+
+        + Resource <font color=blue>interface</font>{}
+        + Subject Subject
+        + Name string
+        + Failures int
+        + State MonitoringState
+        + IsMonitoring bool
+
+        - startWatchLoop(ctx context.Context, wg *sync.WaitGroup, cfg config.ProviderConfig)
+        - startCheckLoop(ctx context.Context, wg *sync.WaitGroup, cfg config.ProviderConfig)
+        - resetFailures()
+        - incrementFailures(unhealthyThreshold int)
+        - getState() MonitoringState
+
+        + Run(ctx context.Context, wg *sync.WaitGroup)
+        + String() string
+
+    }
+    class PodMonitor << (S,Aquamarine) >> {
+        - config config.HealthConfig
+        - pod *v1.Pod
+        - handler *CheckHandler
+        - cancel context.CancelFunc
+        - waitGroup *sync.WaitGroup
+
+        + Monitors []*Monitor
+
+        - createMonitors()
+
+        + Start(ctx context.Context)
+        + Stop()
+
+    }
+    class checkResult << (S,Aquamarine) >> {
+        + Monitor *Monitor
+        + Failed bool
+        + Message string
+        + Timestamp time.Time
+        + Data <font color=blue>interface</font>{}
+
+    }
+    class health.MonitoringState << (T, #FF7700) >>  {
+    }
+    class health.Subject << (T, #FF7700) >>  {
+    }
+
+    ' NOTE remaining entries below were manually added (do not replace this portion when regenerating)
+        Monitor .. MonitoringState
+        Monitor .. Subject
+
+        enum Subject {
+             SubjectUnknown Subject = "unknown"
+             SubjectVkvma   Subject = "vkvma"
+             SubjectApp     Subject = "app"
+        }
+
+        enum MonitoringState {
+            MonitoringStateUnknown   = "unknown"
+            MonitoringStateHealthy   = "healthy"
+            MonitoringStateUnhealthy = "unhealthy"
+        }
+
+        class CheckHandler implements Handler
+}
+
+namespace awsutils {
+    class Client << (S,Aquamarine) >> {
+        + Svc *ec2.Client
+        + WaiterSvc *ec2.InstanceRunningWaiter
+
+        + DescribeNetworkInterfaces(ctx context.Context, params *ec2.DescribeNetworkInterfacesInput) (*ec2.DescribeNetworkInterfacesOutput, error)
+        + DeleteNetworkInterface(ctx context.Context, params *ec2.DeleteNetworkInterfaceInput) (*ec2.DeleteNetworkInterfaceOutput, error)
+        + CreateNetworkInterface(ctx context.Context, params *ec2.CreateNetworkInterfaceInput) (*ec2.CreateNetworkInterfaceOutput, error)
+        + TerminateInstances(ctx context.Context, params *ec2.TerminateInstancesInput) (*ec2.TerminateInstancesOutput, error)
+        + RunInstances(ctx context.Context, input *ec2.RunInstancesInput) (*ec2.RunInstancesOutput, error)
+        + DescribeInstances(ctx context.Context, params *ec2.DescribeInstancesInput) (*ec2.DescribeInstancesOutput, error)
+        + DescribeInstanceStatus(ctx context.Context, params *ec2.DescribeInstanceStatusInput) (*ec2.DescribeInstanceStatusOutput, error)
+        + CreateTags(ctx context.Context, input *ec2.CreateTagsInput) (*ec2.CreateTagsOutput, error)
+        + ModifyInstanceAttribute(ctx context.Context, input *ec2.ModifyInstanceAttributeInput) (*ec2.ModifyInstanceAttributeOutput, error)
+        + DescribeSecurityGroups(ctx context.Context, input *ec2.DescribeSecurityGroupsInput) (*ec2.DescribeSecurityGroupsOutput, error)
+        + DescribeIamInstanceProfileAssociations(ctx context.Context, input *ec2.DescribeIamInstanceProfileAssociationsInput) (*ec2.DescribeIamInstanceProfileAssociationsOutput, error)
+        + ReplaceIamInstanceProfileAssociation(ctx context.Context, input *ec2.ReplaceIamInstanceProfileAssociationInput) (*ec2.ReplaceIamInstanceProfileAssociationOutput, error)
+        + NewInstanceRunningWaiter(input ec2.DescribeInstancesInput) error
+        + SecurityGroupNametoID(ctx context.Context, sgNames []string) ([]string, error)
+
+    }
+    interface EC2API  {
+        + DescribeNetworkInterfaces(ctx context.Context, params *ec2.DescribeNetworkInterfacesInput) (*ec2.DescribeNetworkInterfacesOutput, error)
+        + DeleteNetworkInterface(ctx context.Context, params *ec2.DeleteNetworkInterfaceInput) (*ec2.DeleteNetworkInterfaceOutput, error)
+        + CreateNetworkInterface(ctx context.Context, params *ec2.CreateNetworkInterfaceInput) (*ec2.CreateNetworkInterfaceOutput, error)
+        + TerminateInstances(ctx context.Context, params *ec2.TerminateInstancesInput) (*ec2.TerminateInstancesOutput, error)
+        + RunInstances(ctx context.Context, input *ec2.RunInstancesInput) (*ec2.RunInstancesOutput, error)
+        + DescribeInstances(crx context.Context, input *ec2.DescribeInstancesInput) (*ec2.DescribeInstancesOutput, error)
+        + CreateTags(ctx context.Context, input *ec2.CreateTagsInput) (*ec2.CreateTagsOutput, error)
+        + ModifyInstanceAttribute(ctx context.Context, input *ec2.ModifyInstanceAttributeInput) (*ec2.ModifyInstanceAttributeOutput, error)
+        + SecurityGroupNametoID(ctx context.Context, sgNames []string) ([]string, error)
+        + DescribeIamInstanceProfileAssociations(ctx context.Context, input *ec2.DescribeIamInstanceProfileAssociationsInput) (*ec2.DescribeIamInstanceProfileAssociationsOutput, error)
+        + ReplaceIamInstanceProfileAssociation(ctx context.Context, input *ec2.ReplaceIamInstanceProfileAssociationInput) (*ec2.ReplaceIamInstanceProfileAssociationOutput, error)
+        + NewInstanceRunningWaiter(input ec2.DescribeInstancesInput) error
+
+    }
+    interface S3API  {
+        + PresignGetObject(ctx context.Context, params *s3.GetObjectInput) (*v4.PresignedHTTPRequest, error)
+
+    }
+    class S3Client << (S,Aquamarine) >> {
+        + Svc *s3.Client
+        + PresignSvc *s3.PresignClient
+
+        + PresignGetObject(ctx context.Context, params *s3.GetObjectInput) (*v4.PresignedHTTPRequest, error)
+
+    }
+    class UserData << (S,Aquamarine) >> {
+        + VmInit string
+        + BootstrapAgent string
+        + PresignedURL string
+
+    }
+}
+
+"awsutils.EC2API" <|-- "awsutils.Client"
+"awsutils.S3API" <|-- "awsutils.S3Client"
+
+namespace config {
+    class BootstrapAgent << (S,Aquamarine) >> {
+        + S3Bucket string
+        + S3Key string
+        + GRPCPort int
+        + InitData string
+
+    }
+    class DirectLoader << (S,Aquamarine) >> {
+        + DirectConfig ProviderConfig
+
+        - load() error
+        - validate(pc *ProviderConfig) error
+
+    }
+    class ExtendedConfig << (S,Aquamarine) >> {
+        + KubeConfigPath string
+
+    }
+    class FileLoader << (S,Aquamarine) >> {
+        + ConfigFilePath string
+
+        - load() error
+        - validate(pc *ProviderConfig) error
+
+    }
+    class HealthConfig << (S,Aquamarine) >> {
+        + UnhealthyThresholdCount int
+        + HealthCheckIntervalSeconds int
+        + StreamRetryIntervalSeconds int
+
+    }
+    interface Loader  {
+        - load() error
+        - validate(pc *ProviderConfig) error
+
+    }
+    class ProviderConfig << (S,Aquamarine) >> {
+        + Region string
+        + ClusterName string
+        + ManagementSubnet string
+        + AWSClientTimeoutSeconds int
+        + AWSClientDialerTimeoutSeconds int
+        + StatusIntervalSeconds int
+        + HealthConfig HealthConfig
+        + VKVMAgentConnectionConfig VkvmaConfig
+        + VMConfig VMConfig
+        + BootstrapAgent BootstrapAgent
+        + WarmPoolConfig []WarmPoolConfig
+
+    }
+    class VMConfig << (S,Aquamarine) >> {
+        + DefaultAMI string
+        + InitData string
+
+    }
+    class VkvmaConfig << (S,Aquamarine) >> {
+        + Port int
+        + TimeoutSeconds int
+        + MinConnectTimeoutSeconds int
+        + HealthCheckIntervalSeconds int
+        + Backoff <font color=blue>struct</font>{int, float64, float64, int}
+        + KeepaliveEnabled bool
+        + Keepalive <font color=blue>struct</font>{int, int}
+
+    }
+    class WarmPoolConfig << (S,Aquamarine) >> {
+        + DesiredCount int
+        + IamInstanceProfile string
+        + SecurityGroups []string
+        + KeyPair string
+        + ImageID string
+        + InstanceType string
+        + Subnets []string
+
+    }
+}
+
+"config.Loader" <|-- "config.DirectLoader"
+"config.Loader" <|-- "config.FileLoader"
+@enduml

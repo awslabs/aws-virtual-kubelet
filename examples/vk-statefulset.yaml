@@ -26,7 +26,8 @@ spec:
       serviceAccountName: virtual-kubelet-sa
       containers:
         - name: virtual-kubelet
-          image: <image-url>
+          image: <AWS_ACCOUNT_ID>.dkr.ecr.<AWS_REGION>.amazonaws.com/aws-virtual-kubelet:<DOCKER_TAG>
+
           imagePullPolicy: Always
           ports:
             - containerPort: 80

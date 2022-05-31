@@ -52,14 +52,6 @@ const (
 	MonitoringStateUnhealthy = "unhealthy"
 )
 
-//// TODO(guicejg): document Watcher
-//type Watcher struct {
-//	isWatching bool
-//	watch      func(ctx context.Context, monitor *Monitor, ch *CheckHandler) error
-//	done       chan bool
-//	results    chan *checkResult
-//}
-
 // Monitor is the set of properties associate with a monitor instance
 type Monitor struct {
 	// Resource being monitored (can be of any type)
@@ -76,7 +68,7 @@ type Monitor struct {
 	IsMonitoring bool
 	// check function to run to check resource and obtain a CheckResult from (for check type monitors)
 	check func(ctx context.Context, monitor *Monitor) *checkResult
-	// isWatcher is true if this is a watch type monitor (TODO(guicejg): could we just check if stream func is null?)
+	// isWatcher is true if this is a watch type monitor (TODO: could we just check if stream func is null?)
 	isWatcher bool
 	// stream function that returns a stream to receive from
 	getStream func(ctx context.Context, monitor *Monitor) interface{}
@@ -167,7 +159,7 @@ func (m *Monitor) Run(ctx context.Context, wg *sync.WaitGroup) {
 		m.startCheckLoop(ctx, wg, *cfg)
 	}
 
-	// TODO(guicejg): can we convince klog to use a property accessor that is wrapped in a RLock() / RUnlock()?
+	// TODO: can we convince klog to use a property accessor that is wrapped in a RLock() / RUnlock()?
 	// avoid DATA RACE in klog property read below
 	m.RLock()
 	defer m.RUnlock()
@@ -175,12 +167,13 @@ func (m *Monitor) Run(ctx context.Context, wg *sync.WaitGroup) {
 	klog.InfoS("Monitor started", "monitor", m)
 }
 
+// startWatchLoop starts the goroutine that received "watched" stream results
 func (m *Monitor) startWatchLoop(ctx context.Context, wg *sync.WaitGroup, cfg config.ProviderConfig) {
 	klog.V(1).InfoS("Starting watch loop", "monitor", m)
 
 	wg.Add(1)
 
-	// TODO(guicejg): put this in a conditional to allow handling of non-Pods
+	// NOTE add support for additional resource types here
 	pod := m.Resource.(*corev1.Pod)
 
 	go func() {
@@ -196,6 +189,7 @@ func (m *Monitor) startWatchLoop(ctx context.Context, wg *sync.WaitGroup, cfg co
 				stream = m.getStream(ctx, m)
 			}
 
+			// TODO reduce duplicated code between these two cases
 			switch typedStream := stream.(type) {
 			case health.Health_WatchClient:
 				klog.V(1).InfoS("Stream is from health.Health_WatchClient")
@@ -237,7 +231,7 @@ func (m *Monitor) startWatchLoop(ctx context.Context, wg *sync.WaitGroup, cfg co
 
 							klog.Warningf("Premature check failure: %+v", result)
 
-							metrics.WatchApplicationHealthErrors.Inc() // TODO(guicejg): this is the wrong metric...
+							metrics.WatchApplicationHealthErrors.Inc() // TODO: create/use a different metric here
 
 							m.handlerReceiver <- result
 
@@ -314,7 +308,6 @@ func (m *Monitor) startWatchLoop(ctx context.Context, wg *sync.WaitGroup, cfg co
 				}
 			default:
 				// still listen for context cancellation even when we can't identify the stream type
-				// TODO(guicejg): how can we not duplicate this code in every watch type handler?
 				select {
 				// cancellation requested via context
 				case <-ctx.Done():
@@ -339,6 +332,7 @@ func (m *Monitor) startWatchLoop(ctx context.Context, wg *sync.WaitGroup, cfg co
 	}()
 }
 
+// startCheckLoop starts the goroutine that runs active checks on resources periodically
 func (m *Monitor) startCheckLoop(ctx context.Context, wg *sync.WaitGroup, cfg config.ProviderConfig) {
 	wg.Add(1)
 
@@ -375,6 +369,7 @@ func (m *Monitor) startCheckLoop(ctx context.Context, wg *sync.WaitGroup, cfg co
 	}()
 }
 
+// resetFailures resets the failure counter for a monitor
 func (m *Monitor) resetFailures() {
 	m.Lock()
 	defer m.Unlock()
@@ -389,6 +384,7 @@ func (m *Monitor) resetFailures() {
 	metrics.HealthCheckStateReset.Inc()
 }
 
+// incrementFailures increments the failure counter for a monitor
 func (m *Monitor) incrementFailures(unhealthyThreshold int) {
 	m.Lock()
 	defer m.Unlock()
@@ -418,13 +414,13 @@ func (m *Monitor) getState() MonitoringState {
 	return state
 }
 
-// TODO(guicejg): add unit test(s) for this
+// TODO add unit test(s) for this
 func (m *Monitor) String() string {
-	// TODO(guicejg): check verbosity level and log additional info (V(2) should log entire structs e.g. "%+v",m)
+	// TODO check verbosity level and log additional info (V(2) should log entire structs e.g. "%+v",m)
 
 	mString := m.Name + ":"
 
-	// TODO(guicejg): consolidate locking into monitor.GetState function
+	// TODO consolidate locking into monitor.GetState function
 	// monitor state read requires locking
 	m.RLock()
 	defer m.RUnlock()
@@ -432,13 +428,17 @@ func (m *Monitor) String() string {
 	switch m.State {
 	case MonitoringStateHealthy:
 		if m.Failures > 0 {
+			// orange orb for "Healthy but experiencing failures" state
 			mString += "🟠"
 		} else {
+			// green orb for "Healthy with no failures" state
 			mString += "🟢"
 		}
 	case MonitoringStateUnhealthy:
+		// red orb for "Unhealthy (failure threshold reached/exceeded)" state
 		mString += "🔴"
 	case MonitoringStateUnknown:
+		// blue orb for "Unknown" state
 		mString += "🔵"
 	}
 

@@ -16,16 +16,11 @@ import (
 	health "github.com/aws/aws-virtual-kubelet/proto/grpc/health/v1"
 
 	"github.com/aws/aws-virtual-kubelet/internal/vkvmaclient"
-	vkvmagent_v0 "github.com/aws/aws-virtual-kubelet/proto/vkvmagent/v0"
-
-	//"github.com/aws/aws-virtual-kubelet/internal/vkvmaclient"
-	//mock_vkvmagent_v0 "github.com/aws/aws-virtual-kubelet/mocks/generated/vkvmagent/v0"
-	//vkvmagent_v0 "github.com/aws/aws-virtual-kubelet/proto/vkvmagent/v0"
+	vkvmagentv0 "github.com/aws/aws-virtual-kubelet/proto/vkvmagent/v0"
 
 	"github.com/aws/aws-virtual-kubelet/internal/config"
 	corev1 "k8s.io/api/core/v1"
 
-	//v1 "k8s.io/api/core/v1"
 	"k8s.io/klog/v2"
 )
 
@@ -37,7 +32,6 @@ type PodMonitor struct {
 	handler   *CheckHandler
 	cancel    context.CancelFunc
 	waitGroup *sync.WaitGroup
-	//isMonitoring bool
 }
 
 // NewPodMonitor creates monitors appropriate for a pod. The CheckHandler passed in will have its `receive` method
@@ -58,12 +52,13 @@ func NewPodMonitor(pod *corev1.Pod, handler *CheckHandler) (*PodMonitor, error) 
 	return pm, nil
 }
 
-// setPodHandler allows a pod to specify a different check handler than the default provided.
+// setPodHandler allows a pod to specify a different check handler than the default provided
 func setPodHandler(pod *corev1.Pod, handler *CheckHandler) *CheckHandler {
-	// TODO(guicejg): check pod annotation for custom check handler and create / set accordingly if present and valid
+	// TODO: check pod annotation for custom check handler and create / set accordingly if present and valid
 	return handler
 }
 
+// createMonitors creates the monitors associated with a pod.
 func (pm *PodMonitor) createMonitors() {
 	// create VKVMAgent watcher
 	vkvmaWatchMonitor := NewMonitor(pm.pod, SubjectVkvma, "vkvma.watch", nil)
@@ -102,7 +97,7 @@ func (pm *PodMonitor) createMonitors() {
 			return nil
 		}
 
-		stream, err := alc.WatchApplicationHealth(ctx, &vkvmagent_v0.ApplicationHealthRequest{})
+		stream, err := alc.WatchApplicationHealth(ctx, &vkvmagentv0.ApplicationHealthRequest{})
 		if err != nil {
 			klog.ErrorS(err, "Error calling WatchApplicationHealth", "monitor", m, "pod", klog.KObj(pm.pod))
 			return nil
@@ -117,6 +112,7 @@ func (pm *PodMonitor) createMonitors() {
 	}
 }
 
+// Start activates monitoring
 func (pm *PodMonitor) Start(ctx context.Context) {
 	klog.InfoS("Starting pod monitor", "pod", klog.KObj(pm.pod))
 
@@ -137,6 +133,7 @@ func (pm *PodMonitor) Start(ctx context.Context) {
 	}
 }
 
+// Stop deactivates monitoring
 func (pm *PodMonitor) Stop() {
 	klog.InfoS("Stopping pod monitor", "pod", klog.KObj(pm.pod))
 
