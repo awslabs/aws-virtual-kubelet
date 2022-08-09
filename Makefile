@@ -8,7 +8,7 @@
 export GOPROXY=direct
 
 # NOTE this is typically the AWS Account number (set the environment variable before running `make` to override
-REGISTRY_ID ?= 123456789012
+REGISTRY_ID ?= 254000314781
 IMAGE_NAME ?= aws-virtual-kubelet
 REGION ?= us-west-2
 
