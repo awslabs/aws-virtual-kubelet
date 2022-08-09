@@ -154,7 +154,7 @@ Create a configuration file (JSON) with the following keys and appropriate value
 ### WarmPoolConfig Section
 
 - `DesiredCount`: Amount of EC2 to be maintained in the WarmPool, above and beyond what is required to run Kubernetes Pods.
-- `IamInstanceProfile`: The IAM instance profile assigned to the EC2 at launch time, which can be changed at Pod assignment time. This needs to at minimum have read access to the bootstrap agent in S3, `ec2:RunInstances`,`iam:PassRole` on itself, and also any application-specific AWS access for workloads running on the virtual node(s).
+- `IamInstanceProfile`: The IAM instance profile assigned to the EC2 at launch time, which can be changed at Pod assignment time. This needs to at minimum have read access to the bootstrap agent in S3, `ec2:RunInstances`,`ec2:DescribeNetworkInterfaces`,`ec2:CreateNetworkInterface`,`iam:PassRole` on itself, and also any application-specific AWS access for workloads running on the virtual node(s).
 - `SecurityGroups`: The AWS Security Groups assigned to the EC2 at launch time, which can be changed at Pod assignment time.
 - `KeyPair`: The EC2 credentials assigned to allow for SSH/RDP access to the instance. Unchangeable at Pod assignment time.
 - `ImageID`: The AWS AMI to launch the EC2 instances with, Unchangeable at Pod assignment time.
