@@ -1,12 +1,11 @@
 # Cookbook
-This document contains a "cookbook style" reference of useful commands.  Each entry is a mini [runbook](https://wa.aws.amazon.com/wat.concept.runbook.en.html) of sorts designed to accomplish a specific task.  Collecting these in one place allows other documents to be more concise (linking here when appropriate) and provides a quick reference for later use.
+This document contains a "cookbook style" reference of useful commands and procedures.  Each entry is a mini [runbook](https://wa.aws.amazon.com/wat.concept.runbook.en.html) of sorts designed to accomplish a specific task.
 
 Entries below are divided into sections by major topic area.
 
-**`NOTE`** changing entry titles will likely break links from other documents so _find and replace all_ when doing so.
-
-## AWS Deployment
+## Build
 ### Build Virtual Kubelet and push to an ECR registry
+This example assumes you have set `$MY_AWS_ACCOUNT_ID` and `$MY_AWS_REGION`.  It will generate a Linux binary for the architecture of the building system (e.g. arm64 on an Apple Silicon MacBook), use `GOARCH` to modify this behavior.
 
 ```bash
 export REGISTRY_ID=$MY_AWS_ACCOUNT_ID
@@ -15,29 +14,22 @@ export GOOS=linux
 make push
 ```
 
-## Version Control
-These entries pertain to `git` version control configuration and manipulation.  At the time of this writing the most recent version is `2.33` and has been tested with the steps below.  It's recommended to use the latest version when possible.
+### Build example VKVMAgent for a different OS/ARCH
+To build for alternate operating systems / architectures, use the `GOOS` and `GOARCH` environment variables.
 
-Installation instructions and download links can be found in the [git book download page](https://git-scm.com/downloads).
+e.g. Build the example `vkvmagent` for Linux AMD64 (x86_64)
+```shell
+cd examples/vkvmagent
+GOOS=linux GOARCH=amd64 go build ./...
+file vkvmagent # check binary file type
+# vkvmagent: ELF 64-bit LSB executable, x86-64
+```
 
-### Rewrite / organize commit history
-⚠️ Use this with caution as it can cause loss of work (make a copy first if unsure)
+## Operation
+### Scale VK StatefulSet replicas _down_
+1. Drain VK nodes starting with the highest (however many will be lost due to the scale-down)
+2. Once the pods are relaunched on nodes that will _not_ be terminated due to scale-down, scale the number of StatefulSet replicas down as-desired
 
-#### amend the previous commit with additional changes and/or commit message updates
-`git commit --amend`
-
-#### manipulate the commit history in the current branch since it was created
-
-This command creates an interactive rebase session that allows you to combine (squash) commits, modify commit messages, reorder commits, etc.
-
-The `merge-base` command is a quick way to reference this branch's parent commit.  You can also specify a particular commit hash, or a relative reference such as `HEAD~3`.  See [Rewriting History](https://git-scm.com/book/en/v2/Git-Tools-Rewriting-History) in the [git book](https://git-scm.com/book) for more information.
-
-git rebase -i `git merge-base HEAD <parent-branch-name>`
-
-**`NOTE`** If you've already pushed work affected by the above commands to a remote repository, you will need to "force push" via `git push -f` to force rewriting history on the remote.  This should _**only**_ be done if you're not sharing this branch with anyone else, as it could cause others to lose changes unexpectedly.
-
-See [Rebasing](https://git-scm.com/book/en/v2/Git-Branching-Rebasing) for additional information and [Learn Git Branching](https://learngitbranching.js.org/) for an excellent visual tutorial of both basic and advanced concepts and scenarios.
-
----
->© 2021 Amazon Web Services, Inc. or its affiliates. All Rights Reserved.
-This work is licensed under a Creative Commons Attribution 4.0 International License.
+### Scale VK StatefulSet replicas _up_
+1. Set the updated number of VK replicas and wait for the new pods to launch
+2. Restart any deployments to re-balance pods across VK nodes

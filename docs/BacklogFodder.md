@@ -1,8 +1,8 @@
 # Backlog Fodder
-This file captures ideas and other potential backlog items.  These items are captured here rather than GitHub issues to ensure that the issue backlog represents only committed (or to-be-triaged) work.  Each entry is a **Title** followed by a **Description* (these map directly to GitHub Issue fields for easy import).
+This file captures ideas and other potential backlog items.  These items are captured here rather than GitHub issues to ensure that the issue backlog represents only committed (or to-be-triaged) work.  Each entry is a **Title** followed by a **Description* (these map directly to GitHub Issue fields for easy import later if desired).
 
 #### Remove need for ManagementSubnet
-Instead of creating dummy ENI to support virtual nodes in AWS CloudProvider, Kubernetes node controller should have alternative approach to check the existence of Virtual node when it stops posting health status.
+Instead of creating a dummy ENI to support virtual nodes in AWS CloudProvider, the Kubernetes node controller should have alternative approach to check the existence of Virtual node when it stops posting health status.
 
 #### Add custom pod readiness gates
 Use [Pod readiness](https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-readiness-gate) gates (custom conditions) to track and report EC2 state to Kubernetes. Could also report VKVMA connectivity or other relevant status outside that which VKVMA manages here.
@@ -19,6 +19,8 @@ The [virtual-kubelet](https://github.com/virtual-kubelet/virtual-kubelet) librar
 #### Use contexts more effectively
 Can we share a context with all entities involved in a "pod" then use cancellation of that context to trigger cleanup of all associated resources (e.g. delete app, then drop ec2, etc.)?
 
+**`NOTE`** Health checks use an inherited context (and WaitGroups) to ensure all goroutines are stopped successfully when the top-level context is cancelled.  A similar pattern could be employed for this.
+
 #### Use full EC2 Instance objects as arguments and return values
 There are places in the code like this:
 ```go
@@ -33,13 +35,12 @@ createCompute...return instanceID, privateIP, nil
 Instead of extracting a subset of the Instance object, just return the entire thing (i.e. `return *resp.Instances[0]`).  This will allow receivers of the arguments to determine what portion they need to access.  Since this object is not passed over the network, object/struct size is generally less of a concern (in this case it's a single instance also).
 
 #### Periodically log overall VK status
-Create goroutine loop to periodically log status such as vk version, os, arch, which node it runs on, how many pods it's managing, warm pool status, etc.
+Create goroutine loop to periodically log status such as vk version, os, arch, which node it runs on, how many pods it's managing, warm pool status, etc.  This is particularly helpful when monitoring aggregated logs across many VK instances.
+
+**`NOTE`** a status loop (ticker) has now been [implemented](https://github.com/awslabs/aws-virtual-kubelet/blob/46b75683dbaf5b8b08ec2ec07411d03a21fe62e7/internal/ec2provider/ec2provider.go#L503).  Consider adding the above data to the existing status display.
 
 #### Migrate pod notifications to use utils package version
 Update references to the provider's pod notifier member to use the one from `utils` instead.  That notifier is set automatically in the provider's `NotifyPods` function (by virtual kubelet) and should be used from then on.
-
-Remove the following line to quickly find other code that needs to be updated:
-https://github.com/aws/aws-virtual-kubelet/blob/ed2bc780457f4a32c92bc8815c8678fc2b02ef41/internal/ec2provider/ec2provider.go#L282
 
 #### Use actual Service Quota values for resource capacity
 Obtain default values for CPU, Memory, and Storage from some account attribute or quota value possibly.  Decrement resources on consumption and generally adhere to Service Quotas reported capacity for actual VK capacity metrics.  See https://docs.aws.amazon.com/servicequotas/2019-06-24/apireference/API_GetServiceQuota.html for details.
@@ -66,7 +67,10 @@ type PodError struct {
 #### Implement "flapping" detection in monitoring
 Detect "flapping" between healthy/unhealthy states by tracking transitions.
 
-#### Add / detect debug flag and additional goroutine labeling for easier debugging
+#### Add goroutine labeling for easier debugging when extra verbosity is configured
+When the verbosity level is >= `#` (TBD), add unique labels to goroutines to simplify distributed debugging.
+
+Example code to add a goroutine label.
 ```go
 	// TODO: could use this version conditionally based on presence of debug flag/log-level
 	// NOTE example that applies labels to the goroutine for easier debugging
@@ -81,11 +85,6 @@ Detect "flapping" between healthy/unhealthy states by tracking transitions.
 	//  marked unhealthy
 ```
 
-#### Simplify health check type handling
-```go
-	// TODO: just have a type in monitor and have it be monitor.CheckerType or monitor.WatcherType
-	m.isWatcher = true
-```
 
 ## Tests
 #### Add parameters for `launch_pods.go` number of pods to generate and template path
@@ -170,6 +169,3 @@ func createPipelineIAMAccount(stack awscdk.Stack) awsiam.User {
 This code creates an IAM user for a CI/CD system (e.g. GitHub) and exposes the access keys via AWS Secrets Manager.  The activation of this code should be controlled by a [CDK Context](https://docs.aws.amazon.com/cdk/v2/guide/context.html) flag that allows additional CI/CD pipeline related resources and actions to be enabled.
 
 [^1]: See https://github.com/virtual-kubelet/virtual-kubelet/#providers point #3
----
->© 2021 Amazon Web Services, Inc. or its affiliates. All Rights Reserved.
-This work is licensed under a Creative Commons Attribution 4.0 International License.
