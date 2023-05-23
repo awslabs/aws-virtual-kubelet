@@ -13,14 +13,13 @@ require (
 	github.com/golang/mock v1.6.0
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.11.0
-	github.com/prometheus/client_model v0.2.0
+	github.com/prometheus/client_model v0.3.0
 	github.com/sirupsen/logrus v1.8.1
-	github.com/stretchr/testify v1.7.0
+	github.com/stretchr/testify v1.8.1
 	github.com/virtual-kubelet/node-cli v0.7.0
 	github.com/virtual-kubelet/virtual-kubelet v1.6.0
-	golang.org/x/net v0.0.0-20211112202133-69e39bad7dc2 // indirect
-	google.golang.org/grpc v1.44.0
-	google.golang.org/protobuf v1.27.1
+	google.golang.org/grpc v1.55.0
+	google.golang.org/protobuf v1.30.0
 	k8s.io/api v0.23.0
 	k8s.io/apimachinery v0.23.0
 	k8s.io/client-go v0.23.0
