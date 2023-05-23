@@ -31,25 +31,17 @@ func (c *Client) DescribeHostReservations(ctx context.Context, params *DescribeH
 type DescribeHostReservationsInput struct {
 
 	// The filters.
-	//
-	// * instance-family - The instance family (for example, m4).
-	//
-	// *
-	// payment-option - The payment option (NoUpfront | PartialUpfront |
-	// AllUpfront).
-	//
-	// * state - The state of the reservation (payment-pending |
-	// payment-failed | active | retired).
-	//
-	// * tag: - The key/value combination of a tag
-	// assigned to the resource. Use the tag key in the filter name and the tag value
-	// as the filter value. For example, to find all resources that have a tag with the
-	// key Owner and the value TeamA, specify tag:Owner for the filter name and TeamA
-	// for the filter value.
-	//
-	// * tag-key - The key of a tag assigned to the resource.
-	// Use this filter to find all resources assigned a tag with a specific key,
-	// regardless of the tag value.
+	//   - instance-family - The instance family (for example, m4 ).
+	//   - payment-option - The payment option ( NoUpfront | PartialUpfront |
+	//   AllUpfront ).
+	//   - state - The state of the reservation ( payment-pending | payment-failed |
+	//   active | retired ).
+	//   - tag: - The key/value combination of a tag assigned to the resource. Use the
+	//   tag key in the filter name and the tag value as the filter value. For example,
+	//   to find all resources that have a tag with the key Owner and the value TeamA ,
+	//   specify tag:Owner for the filter name and TeamA for the filter value.
+	//   - tag-key - The key of a tag assigned to the resource. Use this filter to find
+	//   all resources assigned a tag with a specific key, regardless of the tag value.
 	Filter []types.Filter
 
 	// The host reservation IDs.
@@ -130,6 +122,9 @@ func (c *Client) addOperationDescribeHostReservationsMiddlewares(stack *middlewa
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opDescribeHostReservations(options.Region), middleware.Before); err != nil {
 		return err
 	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
+		return err
+	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {
 		return err
 	}
@@ -194,12 +189,13 @@ func NewDescribeHostReservationsPaginator(client DescribeHostReservationsAPIClie
 		client:    client,
 		params:    params,
 		firstPage: true,
+		nextToken: params.NextToken,
 	}
 }
 
 // HasMorePages returns a boolean indicating whether more pages are available
 func (p *DescribeHostReservationsPaginator) HasMorePages() bool {
-	return p.firstPage || p.nextToken != nil
+	return p.firstPage || (p.nextToken != nil && len(*p.nextToken) != 0)
 }
 
 // NextPage retrieves the next DescribeHostReservations page.
@@ -226,7 +222,10 @@ func (p *DescribeHostReservationsPaginator) NextPage(ctx context.Context, optFns
 	prevToken := p.nextToken
 	p.nextToken = result.NextToken
 
-	if p.options.StopOnDuplicateToken && prevToken != nil && p.nextToken != nil && *prevToken == *p.nextToken {
+	if p.options.StopOnDuplicateToken &&
+		prevToken != nil &&
+		p.nextToken != nil &&
+		*prevToken == *p.nextToken {
 		p.nextToken = nil
 	}
 

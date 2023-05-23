@@ -32,17 +32,13 @@ type DescribeTrafficMirrorFiltersInput struct {
 
 	// Checks whether you have the required permissions for the action, without
 	// actually making the request, and provides an error response. If you have the
-	// required permissions, the error response is DryRunOperation. Otherwise, it is
-	// UnauthorizedOperation.
+	// required permissions, the error response is DryRunOperation . Otherwise, it is
+	// UnauthorizedOperation .
 	DryRun *bool
 
 	// One or more filters. The possible values are:
-	//
-	// * description: The Traffic Mirror
-	// filter description.
-	//
-	// * traffic-mirror-filter-id: The ID of the Traffic Mirror
-	// filter.
+	//   - description : The Traffic Mirror filter description.
+	//   - traffic-mirror-filter-id : The ID of the Traffic Mirror filter.
 	Filters []types.Filter
 
 	// The maximum number of results to return with a single call. To retrieve the
@@ -121,6 +117,9 @@ func (c *Client) addOperationDescribeTrafficMirrorFiltersMiddlewares(stack *midd
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opDescribeTrafficMirrorFilters(options.Region), middleware.Before); err != nil {
 		return err
 	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
+		return err
+	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {
 		return err
 	}
@@ -184,12 +183,13 @@ func NewDescribeTrafficMirrorFiltersPaginator(client DescribeTrafficMirrorFilter
 		client:    client,
 		params:    params,
 		firstPage: true,
+		nextToken: params.NextToken,
 	}
 }
 
 // HasMorePages returns a boolean indicating whether more pages are available
 func (p *DescribeTrafficMirrorFiltersPaginator) HasMorePages() bool {
-	return p.firstPage || p.nextToken != nil
+	return p.firstPage || (p.nextToken != nil && len(*p.nextToken) != 0)
 }
 
 // NextPage retrieves the next DescribeTrafficMirrorFilters page.
@@ -216,7 +216,10 @@ func (p *DescribeTrafficMirrorFiltersPaginator) NextPage(ctx context.Context, op
 	prevToken := p.nextToken
 	p.nextToken = result.NextToken
 
-	if p.options.StopOnDuplicateToken && prevToken != nil && p.nextToken != nil && *prevToken == *p.nextToken {
+	if p.options.StopOnDuplicateToken &&
+		prevToken != nil &&
+		p.nextToken != nil &&
+		*prevToken == *p.nextToken {
 		p.nextToken = nil
 	}
 

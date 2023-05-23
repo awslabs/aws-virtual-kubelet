@@ -18,9 +18,9 @@ import (
 // keys, without needing to delete the VPC or virtual private gateway. If you
 // create a new VPN connection, you must reconfigure the customer gateway device
 // using the new configuration information returned with the new VPN connection ID.
-// For certificate-based authentication, delete all AWS Certificate Manager (ACM)
-// private certificates used for the AWS-side tunnel endpoints for the VPN
-// connection before deleting the VPN connection.
+// For certificate-based authentication, delete all Certificate Manager (ACM)
+// private certificates used for the Amazon Web Services-side tunnel endpoints for
+// the VPN connection before deleting the VPN connection.
 func (c *Client) DeleteVpnConnection(ctx context.Context, params *DeleteVpnConnectionInput, optFns ...func(*Options)) (*DeleteVpnConnectionOutput, error) {
 	if params == nil {
 		params = &DeleteVpnConnectionInput{}
@@ -46,8 +46,8 @@ type DeleteVpnConnectionInput struct {
 
 	// Checks whether you have the required permissions for the action, without
 	// actually making the request, and provides an error response. If you have the
-	// required permissions, the error response is DryRunOperation. Otherwise, it is
-	// UnauthorizedOperation.
+	// required permissions, the error response is DryRunOperation . Otherwise, it is
+	// UnauthorizedOperation .
 	DryRun *bool
 
 	noSmithyDocumentSerde
@@ -109,6 +109,9 @@ func (c *Client) addOperationDeleteVpnConnectionMiddlewares(stack *middleware.St
 		return err
 	}
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opDeleteVpnConnection(options.Region), middleware.Before); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {

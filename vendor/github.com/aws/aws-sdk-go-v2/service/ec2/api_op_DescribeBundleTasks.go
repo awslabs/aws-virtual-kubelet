@@ -43,39 +43,23 @@ type DescribeBundleTasksInput struct {
 
 	// Checks whether you have the required permissions for the action, without
 	// actually making the request, and provides an error response. If you have the
-	// required permissions, the error response is DryRunOperation. Otherwise, it is
-	// UnauthorizedOperation.
+	// required permissions, the error response is DryRunOperation . Otherwise, it is
+	// UnauthorizedOperation .
 	DryRun *bool
 
 	// The filters.
-	//
-	// * bundle-id - The ID of the bundle task.
-	//
-	// * error-code - If the
-	// task failed, the error code returned.
-	//
-	// * error-message - If the task failed, the
-	// error message returned.
-	//
-	// * instance-id - The ID of the instance.
-	//
-	// * progress -
-	// The level of task completion, as a percentage (for example, 20%).
-	//
-	// * s3-bucket -
-	// The Amazon S3 bucket to store the AMI.
-	//
-	// * s3-prefix - The beginning of the AMI
-	// name.
-	//
-	// * start-time - The time the task started (for example,
-	// 2013-09-15T17:15:20.000Z).
-	//
-	// * state - The state of the task (pending |
-	// waiting-for-shutdown | bundling | storing | cancelling | complete | failed).
-	//
-	// *
-	// update-time - The time of the most recent update for the task.
+	//   - bundle-id - The ID of the bundle task.
+	//   - error-code - If the task failed, the error code returned.
+	//   - error-message - If the task failed, the error message returned.
+	//   - instance-id - The ID of the instance.
+	//   - progress - The level of task completion, as a percentage (for example, 20%).
+	//   - s3-bucket - The Amazon S3 bucket to store the AMI.
+	//   - s3-prefix - The beginning of the AMI name.
+	//   - start-time - The time the task started (for example,
+	//   2013-09-15T17:15:20.000Z).
+	//   - state - The state of the task ( pending | waiting-for-shutdown | bundling |
+	//   storing | cancelling | complete | failed ).
+	//   - update-time - The time of the most recent update for the task.
 	Filters []types.Filter
 
 	noSmithyDocumentSerde
@@ -140,6 +124,9 @@ func (c *Client) addOperationDescribeBundleTasksMiddlewares(stack *middleware.St
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opDescribeBundleTasks(options.Region), middleware.Before); err != nil {
 		return err
 	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
+		return err
+	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {
 		return err
 	}
@@ -152,8 +139,8 @@ func (c *Client) addOperationDescribeBundleTasksMiddlewares(stack *middleware.St
 	return nil
 }
 
-// DescribeBundleTasksAPIClient is a client that implements the DescribeBundleTasks
-// operation.
+// DescribeBundleTasksAPIClient is a client that implements the
+// DescribeBundleTasks operation.
 type DescribeBundleTasksAPIClient interface {
 	DescribeBundleTasks(context.Context, *DescribeBundleTasksInput, ...func(*Options)) (*DescribeBundleTasksOutput, error)
 }
@@ -173,8 +160,8 @@ type BundleTaskCompleteWaiterOptions struct {
 	// MinDelay must resolve to a value lesser than or equal to the MaxDelay.
 	MinDelay time.Duration
 
-	// MaxDelay is the maximum amount of time to delay between retries. If unset or set
-	// to zero, BundleTaskCompleteWaiter will use default max delay of 120 seconds.
+	// MaxDelay is the maximum amount of time to delay between retries. If unset or
+	// set to zero, BundleTaskCompleteWaiter will use default max delay of 120 seconds.
 	// Note that MaxDelay must resolve to value greater than or equal to the MinDelay.
 	MaxDelay time.Duration
 
@@ -219,8 +206,17 @@ func NewBundleTaskCompleteWaiter(client DescribeBundleTasksAPIClient, optFns ...
 // the maximum wait duration the waiter will wait. The maxWaitDur is required and
 // must be greater than zero.
 func (w *BundleTaskCompleteWaiter) Wait(ctx context.Context, params *DescribeBundleTasksInput, maxWaitDur time.Duration, optFns ...func(*BundleTaskCompleteWaiterOptions)) error {
+	_, err := w.WaitForOutput(ctx, params, maxWaitDur, optFns...)
+	return err
+}
+
+// WaitForOutput calls the waiter function for BundleTaskComplete waiter and
+// returns the output of the successful operation. The maxWaitDur is the maximum
+// wait duration the waiter will wait. The maxWaitDur is required and must be
+// greater than zero.
+func (w *BundleTaskCompleteWaiter) WaitForOutput(ctx context.Context, params *DescribeBundleTasksInput, maxWaitDur time.Duration, optFns ...func(*BundleTaskCompleteWaiterOptions)) (*DescribeBundleTasksOutput, error) {
 	if maxWaitDur <= 0 {
-		return fmt.Errorf("maximum wait time for waiter must be greater than zero")
+		return nil, fmt.Errorf("maximum wait time for waiter must be greater than zero")
 	}
 
 	options := w.options
@@ -233,7 +229,7 @@ func (w *BundleTaskCompleteWaiter) Wait(ctx context.Context, params *DescribeBun
 	}
 
 	if options.MinDelay > options.MaxDelay {
-		return fmt.Errorf("minimum waiter delay %v must be lesser than or equal to maximum waiter delay of %v.", options.MinDelay, options.MaxDelay)
+		return nil, fmt.Errorf("minimum waiter delay %v must be lesser than or equal to maximum waiter delay of %v.", options.MinDelay, options.MaxDelay)
 	}
 
 	ctx, cancelFn := context.WithTimeout(ctx, maxWaitDur)
@@ -261,10 +257,10 @@ func (w *BundleTaskCompleteWaiter) Wait(ctx context.Context, params *DescribeBun
 
 		retryable, err := options.Retryable(ctx, params, out, err)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if !retryable {
-			return nil
+			return out, nil
 		}
 
 		remainingTime -= time.Since(start)
@@ -277,16 +273,16 @@ func (w *BundleTaskCompleteWaiter) Wait(ctx context.Context, params *DescribeBun
 			attempt, options.MinDelay, options.MaxDelay, remainingTime,
 		)
 		if err != nil {
-			return fmt.Errorf("error computing waiter delay, %w", err)
+			return nil, fmt.Errorf("error computing waiter delay, %w", err)
 		}
 
 		remainingTime -= delay
 		// sleep for the delay amount before invoking a request
 		if err := smithytime.SleepWithContext(ctx, delay); err != nil {
-			return fmt.Errorf("request cancelled while waiting, %w", err)
+			return nil, fmt.Errorf("request cancelled while waiting, %w", err)
 		}
 	}
-	return fmt.Errorf("exceeded max wait time for BundleTaskComplete waiter")
+	return nil, fmt.Errorf("exceeded max wait time for BundleTaskComplete waiter")
 }
 
 func bundleTaskCompleteStateRetryable(ctx context.Context, input *DescribeBundleTasksInput, output *DescribeBundleTasksOutput, err error) (bool, error) {

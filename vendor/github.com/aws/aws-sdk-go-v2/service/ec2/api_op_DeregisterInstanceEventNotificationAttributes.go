@@ -11,7 +11,7 @@ import (
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
-// c Deregisters tag keys to prevent tags that have the specified tag keys from
+// Deregisters tag keys to prevent tags that have the specified tag keys from
 // being included in scheduled event notifications for resources in the Region.
 func (c *Client) DeregisterInstanceEventNotificationAttributes(ctx context.Context, params *DeregisterInstanceEventNotificationAttributesInput, optFns ...func(*Options)) (*DeregisterInstanceEventNotificationAttributesOutput, error) {
 	if params == nil {
@@ -32,8 +32,8 @@ type DeregisterInstanceEventNotificationAttributesInput struct {
 
 	// Checks whether you have the required permissions for the action, without
 	// actually making the request, and provides an error response. If you have the
-	// required permissions, the error response is DryRunOperation. Otherwise, it is
-	// UnauthorizedOperation.
+	// required permissions, the error response is DryRunOperation . Otherwise, it is
+	// UnauthorizedOperation .
 	DryRun *bool
 
 	// Information about the tag keys to deregister.
@@ -99,6 +99,9 @@ func (c *Client) addOperationDeregisterInstanceEventNotificationAttributesMiddle
 		return err
 	}
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opDeregisterInstanceEventNotificationAttributes(options.Region), middleware.Before); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {

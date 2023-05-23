@@ -14,10 +14,7 @@ import (
 // private DNS name domain for the endpoint service. The service provider must
 // successfully perform the verification before the consumer can use the name to
 // access the service. Before the service provider runs this command, they must add
-// a record to the DNS server. For more information, see Adding a TXT Record to
-// Your Domain's DNS Server
-// (https://docs.aws.amazon.com/vpc/latest/userguide/endpoint-services-dns-validation.html#add-dns-txt-record)
-// in the Amazon VPC User Guide.
+// a record to the DNS server.
 func (c *Client) StartVpcEndpointServicePrivateDnsVerification(ctx context.Context, params *StartVpcEndpointServicePrivateDnsVerificationInput, optFns ...func(*Options)) (*StartVpcEndpointServicePrivateDnsVerificationOutput, error) {
 	if params == nil {
 		params = &StartVpcEndpointServicePrivateDnsVerificationInput{}
@@ -42,8 +39,8 @@ type StartVpcEndpointServicePrivateDnsVerificationInput struct {
 
 	// Checks whether you have the required permissions for the action, without
 	// actually making the request, and provides an error response. If you have the
-	// required permissions, the error response is DryRunOperation. Otherwise, it is
-	// UnauthorizedOperation.
+	// required permissions, the error response is DryRunOperation . Otherwise, it is
+	// UnauthorizedOperation .
 	DryRun *bool
 
 	noSmithyDocumentSerde
@@ -109,6 +106,9 @@ func (c *Client) addOperationStartVpcEndpointServicePrivateDnsVerificationMiddle
 		return err
 	}
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opStartVpcEndpointServicePrivateDnsVerification(options.Region), middleware.Before); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {
