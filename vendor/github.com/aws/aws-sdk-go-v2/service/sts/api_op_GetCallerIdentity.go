@@ -12,19 +12,18 @@ import (
 
 // Returns details about the IAM user or role whose credentials are used to call
 // the operation. No permissions are required to perform this operation. If an
-// administrator adds a policy to your IAM user or role that explicitly denies
-// access to the sts:GetCallerIdentity action, you can still perform this
-// operation. Permissions are not required because the same information is returned
-// when an IAM user or role is denied access. To view an example response, see I Am
-// Not Authorized to Perform: iam:DeleteVirtualMFADevice
-// (https://docs.aws.amazon.com/IAM/latest/UserGuide/troubleshoot_general.html#troubleshoot_general_access-denied-delete-mfa)
+// administrator attaches a policy to your identity that explicitly denies access
+// to the sts:GetCallerIdentity action, you can still perform this operation.
+// Permissions are not required because the same information is returned when
+// access is denied. To view an example response, see I Am Not Authorized to
+// Perform: iam:DeleteVirtualMFADevice (https://docs.aws.amazon.com/IAM/latest/UserGuide/troubleshoot_general.html#troubleshoot_general_access-denied-delete-mfa)
 // in the IAM User Guide.
 func (c *Client) GetCallerIdentity(ctx context.Context, params *GetCallerIdentityInput, optFns ...func(*Options)) (*GetCallerIdentityOutput, error) {
 	if params == nil {
 		params = &GetCallerIdentityInput{}
 	}
 
-	result, metadata, err := c.invokeOperation(ctx, "GetCallerIdentity", params, optFns, addOperationGetCallerIdentityMiddlewares)
+	result, metadata, err := c.invokeOperation(ctx, "GetCallerIdentity", params, optFns, c.addOperationGetCallerIdentityMiddlewares)
 	if err != nil {
 		return nil, err
 	}
@@ -35,31 +34,33 @@ func (c *Client) GetCallerIdentity(ctx context.Context, params *GetCallerIdentit
 }
 
 type GetCallerIdentityInput struct {
+	noSmithyDocumentSerde
 }
 
 // Contains the response to a successful GetCallerIdentity request, including
 // information about the entity making the request.
 type GetCallerIdentityOutput struct {
 
-	// The AWS account ID number of the account that owns or contains the calling
-	// entity.
+	// The Amazon Web Services account ID number of the account that owns or contains
+	// the calling entity.
 	Account *string
 
-	// The AWS ARN associated with the calling entity.
+	// The Amazon Web Services ARN associated with the calling entity.
 	Arn *string
 
-	// The unique identifier of the calling entity. The exact value depends on the type
-	// of entity that is making the call. The values returned are those listed in the
-	// aws:userid column in the Principal table
-	// (https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_variables.html#principaltable)
+	// The unique identifier of the calling entity. The exact value depends on the
+	// type of entity that is making the call. The values returned are those listed in
+	// the aws:userid column in the Principal table (https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_variables.html#principaltable)
 	// found on the Policy Variables reference page in the IAM User Guide.
 	UserId *string
 
 	// Metadata pertaining to the operation's result.
 	ResultMetadata middleware.Metadata
+
+	noSmithyDocumentSerde
 }
 
-func addOperationGetCallerIdentityMiddlewares(stack *middleware.Stack, options Options) (err error) {
+func (c *Client) addOperationGetCallerIdentityMiddlewares(stack *middleware.Stack, options Options) (err error) {
 	err = stack.Serialize.Add(&awsAwsquery_serializeOpGetCallerIdentity{}, middleware.After)
 	if err != nil {
 		return err
@@ -107,6 +108,9 @@ func addOperationGetCallerIdentityMiddlewares(stack *middleware.Stack, options O
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opGetCallerIdentity(options.Region), middleware.Before); err != nil {
 		return err
 	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
+		return err
+	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {
 		return err
 	}
@@ -141,7 +145,7 @@ func (c *PresignClient) PresignGetCallerIdentity(ctx context.Context, params *Ge
 	clientOptFns := append(options.ClientOptions, withNopHTTPClientAPIOption)
 
 	result, _, err := c.client.invokeOperation(ctx, "GetCallerIdentity", params, clientOptFns,
-		addOperationGetCallerIdentityMiddlewares,
+		c.client.addOperationGetCallerIdentityMiddlewares,
 		presignConverter(options).convertToPresignMiddleware,
 	)
 	if err != nil {
