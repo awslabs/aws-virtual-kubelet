@@ -35,8 +35,9 @@ type PodMonitor struct {
 }
 
 // NewPodMonitor creates monitors appropriate for a pod. The CheckHandler passed in will have its `receive` method
-//  invoked to receive and process check results, unless a pod specifies a custom handler via pod annotation (in which
-//  case _that_ handler's `receive` will be called instead).
+//
+//	invoked to receive and process check results, unless a pod specifies a custom handler via pod annotation (in which
+//	case _that_ handler's `receive` will be called instead).
 func NewPodMonitor(pod *corev1.Pod, handler *CheckHandler) (*PodMonitor, error) {
 	cfg := config.Config().HealthConfig
 	klog.Infof("Pod Monitor loaded cfg %+v", cfg)

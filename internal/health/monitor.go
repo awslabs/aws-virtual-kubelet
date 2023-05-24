@@ -94,7 +94,8 @@ type checkResult struct {
 }
 
 // NewCheckResult creates a new check result for a particular monitor, failure state, message and (optional) data.
-//  This is also where the monitor state is updated since the state should only change based on the result of a check.
+//
+//	This is also where the monitor state is updated since the state should only change based on the result of a check.
 func NewCheckResult(monitor *Monitor, failed bool, message string, data interface{}) *checkResult {
 	cr := &checkResult{
 		Monitor:   monitor,
@@ -120,17 +121,18 @@ func NewCheckResult(monitor *Monitor, failed bool, message string, data interfac
 //  or potential recursion is safe due to enforced runtime ordering)
 
 // NewMonitor creates a new Monitor for a resource, targeting a subject (component) of that resource.  Each individual
-//  monitor is associated with a check function that knows how to validate the state of the subject.  The function
-//  must return a checkResult in _every case_ (no error-handling is applied to check function return values).
 //
-//  Check functions are executed every `HealthCheckIntervalSeconds` seconds and the result is sent to a channel provided
-//  at Monitor instantiation.  This `handlerReceiver` channel should be monitored by an upstream handler function that
-//  can decide  what actions to take based on check results.
+//	monitor is associated with a check function that knows how to validate the state of the subject.  The function
+//	must return a checkResult in _every case_ (no error-handling is applied to check function return values).
 //
-//  Stopping a monitor is accomplished by calling `cancel()` on the context provided at instantiation.  This context
-//  must be a context.WithCancel and is owned by the creator of the monitor (e.g. PodMonitor).  A WaitGroup parameter
-//  is also present, which allows tracking of goroutines created by a monitor.  This helps ensure goroutines do not leak
-//  over time.
+//	Check functions are executed every `HealthCheckIntervalSeconds` seconds and the result is sent to a channel provided
+//	at Monitor instantiation.  This `handlerReceiver` channel should be monitored by an upstream handler function that
+//	can decide  what actions to take based on check results.
+//
+//	Stopping a monitor is accomplished by calling `cancel()` on the context provided at instantiation.  This context
+//	must be a context.WithCancel and is owned by the creator of the monitor (e.g. PodMonitor).  A WaitGroup parameter
+//	is also present, which allows tracking of goroutines created by a monitor.  This helps ensure goroutines do not leak
+//	over time.
 func NewMonitor(
 	resource interface{}, subject Subject, name string,
 	check func(ctx context.Context, m *Monitor) *checkResult) *Monitor {

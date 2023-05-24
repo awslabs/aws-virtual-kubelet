@@ -48,10 +48,14 @@ import (
 )
 
 // Ec2Provider implements PodLifecycleHandler which defines the interface used by the PodController to react to new and
-//  changed pods scheduled to the node that is being managed.
+//
+//	changed pods scheduled to the node that is being managed.
+//
 // Errors produced by these methods should implement an interface from
-//  github.com/virtual-kubelet/virtual-kubelet/errdefs package in order for the core logic to be able to understand
-//  the type of failure.
+//
+//	github.com/virtual-kubelet/virtual-kubelet/errdefs package in order for the core logic to be able to understand
+//	the type of failure.
+//
 // See https://pkg.go.dev/github.com/virtual-kubelet/virtual-kubelet/node
 type Ec2Provider struct {
 	NodeName string
@@ -367,9 +371,12 @@ func (p *Ec2Provider) launchApplication(
 }
 
 // NOTE while klog flags are present in the command line options presented by `virtual-kubelet -h`, it does not process
-//  them correctly for some reason, which means flags like ` --klog.v Level` are silently discarded. 😑
+//
+//	them correctly for some reason, which means flags like ` --klog.v Level` are silently discarded. 😑
+//
 // updateVerbosityLevel explicitly sets the klog verbosity from the intended commandline arg to work around a bug in
-//  node-cli
+//
+//	node-cli
 func updateVerbosityLevel() {
 	var level klog.Level
 

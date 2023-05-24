@@ -88,12 +88,12 @@ func (client *Client) RunInstances(ctx context.Context, input *ec2.RunInstancesI
 	return resp, err
 }
 
-//DescribeInstance retrieves information of EC2 instance based on the parameters
+// DescribeInstance retrieves information of EC2 instance based on the parameters
 func (client *Client) DescribeInstances(ctx context.Context, params *ec2.DescribeInstancesInput) (*ec2.DescribeInstancesOutput, error) {
 	return client.Svc.DescribeInstances(ctx, params)
 }
 
-//DescribeInstanceStatus Describes the status of the specified instances or all of your instances
+// DescribeInstanceStatus Describes the status of the specified instances or all of your instances
 func (client *Client) DescribeInstanceStatus(ctx context.Context, params *ec2.DescribeInstanceStatusInput) (*ec2.DescribeInstanceStatusOutput, error) {
 	return client.Svc.DescribeInstanceStatus(ctx, params)
 }
@@ -123,7 +123,7 @@ func (client *Client) ReplaceIamInstanceProfileAssociation(ctx context.Context, 
 	return client.Svc.ReplaceIamInstanceProfileAssociation(ctx, input)
 }
 
-//NewInstanceRunningWaiter waits until instance status becomes "running"
+// NewInstanceRunningWaiter waits until instance status becomes "running"
 func (client *Client) NewInstanceRunningWaiter(input ec2.DescribeInstancesInput) error {
 	waiter := client.WaiterSvc
 	maxWaitTime := 60 * time.Second
