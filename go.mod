@@ -20,7 +20,7 @@ require (
 	github.com/virtual-kubelet/virtual-kubelet v1.6.0
 	golang.org/x/net v0.0.0-20211112202133-69e39bad7dc2 // indirect
 	google.golang.org/grpc v1.44.0
-	google.golang.org/protobuf v1.27.1
+	google.golang.org/protobuf v1.30.0
 	k8s.io/api v0.23.0
 	k8s.io/apimachinery v0.23.0
 	k8s.io/client-go v0.23.0
