@@ -100,7 +100,7 @@ jobs:
             echo "COVERAGE_BADGE_FILENAME=${{ github.event.repository.node_id }}" >> $GITHUB_ENV
           fi
       - name: Generate test coverage badge
-        uses: jguice/dynamic-badges-action@v1.1.0
+        uses: schneegans/dynamic-badges-action@v1.6.0
         with:
           auth: ${{ secrets.BADGE_GIST_TOKEN }}
           gistID: ${{ secrets.BADGE_GIST_ID }}
@@ -115,4 +115,4 @@ jobs:
         # if: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref == github.event.repository.default_branch && github.event.repository.fork == 'false' }}
         run: |
           echo "DEFAULT_BRANCH_COVERAGE=$(curl -s -H 'Authorization: Bearer ${{ secrets.BADGE_GIST_TOKEN }}'\
-            https://gist.githubusercontent.com/jguice/${{ secrets.BADGE_GIST_ID }}/raw/${{ github.event.repository.default_branch }}.json | jq '.message')" >> $GITHUB_ENV
+            https://gist.githubusercontent.com/dims/${{ secrets.BADGE_GIST_ID }}/raw/${{ github.event.repository.default_branch }}.json | jq '.message')" >> $GITHUB_ENV
