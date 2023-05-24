@@ -1,4 +1,4 @@
-[![Validation](https://github.com/awslabs/aws-virtual-kubelet/actions/workflows/validation.yaml/badge.svg)](https://github.com/awslabs/aws-virtual-kubelet/actions/workflows/validation.yaml)  ![Coverage Badge](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/jguice/237e23a1e28940815a9fced2b917012c/raw/main.json)
+[![Validation](https://github.com/awslabs/aws-virtual-kubelet/actions/workflows/validation.yaml/badge.svg)](https://github.com/awslabs/aws-virtual-kubelet/actions/workflows/validation.yaml)  ![Coverage Badge](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/dims/2f400d09b8deb931da6f1d498aba8c07/raw/main.json)
 
 # AWS Virtual Kubelet
 AWS Virtual Kubelet provides an extension to your [Kubernetes](https://kubernetes.io/) cluster that can provision and maintain [EC2](https://aws.amazon.com/ec2/) based [Pods](https://kubernetes.io/docs/concepts/workloads/pods/).  These EC2 pods can run arbitrary applications which might not otherwise fit into containers.
