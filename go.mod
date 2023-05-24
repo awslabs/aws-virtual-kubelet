@@ -8,7 +8,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/internal/ini v1.0.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.16.0
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.11.0
-	github.com/creasty/defaults v1.5.2
+	github.com/creasty/defaults v1.7.0
 	github.com/gogo/googleapis v1.4.1
 	github.com/golang/mock v1.6.0
 	github.com/pkg/errors v0.9.1
