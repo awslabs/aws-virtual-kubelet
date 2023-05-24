@@ -1,14 +1,15 @@
-[![Validation](https://github.com/awslabs/aws-virtual-kubelet/actions/workflows/validation.yaml/badge.svg)](https://github.com/awslabs/aws-virtual-kubelet/actions/workflows/validation.yaml)  ![Coverage Badge](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/jguice/237e23a1e28940815a9fced2b917012c/raw/main.json)
+[![Validation](https://github.com/awslabs/aws-virtual-kubelet/actions/workflows/validation.yaml/badge.svg)](https://github.com/awslabs/aws-virtual-kubelet/actions/workflows/validation.yaml)  ![Coverage Badge](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/dims/2f400d09b8deb931da6f1d498aba8c07/raw/main.json)
 
 # AWS Virtual Kubelet
+AWS Virtual Kubelet aims to provide an extension to your [Kubernetes](https://kubernetes.io/) cluster that can provision and maintain [EC2](https://aws.amazon.com/ec2/) instances through regular Kubernetes operations. This enables usage of non-standard operating systems for container ecosystems, such as MacOS.
 
-AWS Virtual Kubelet aims to provide an extension to your Kubernetes cluster that can provision and maintain EC2 instances through regular Kubernetes operations. This enables usage of non-standard operating systems for container ecosystems, such as MacOS.
-
-[Virtual Kubelet](https://github.com/virtual-kubelet/virtual-kubelet) can be deployed as a binary and joined to an existing [Kubernetes](https://kubernetes.io/) cluster, however, it is recommended to deploy as a Pod to an existing cluster.
+This expands the management capabilities of Kubernetes, enabling use-cases such as macOS native application lifecycle control via standard Kubernetes tooling.
 
 ## Architecture
 
 ![](docs/img/vk.png)
+
+See [Software Architecture](docs/SoftwareArchitecture.md) for an overview of the code organization and general behavior.  For detailed coverage of specific aspects of system/code behavior, see [implemented RFCs](docs/rfcs/implemented).
 
 ### Components
 
@@ -20,7 +21,7 @@ AWS Virtual Kubelet aims to provide an extension to your Kubernetes cluster that
   <dt>Virtual Kubelet Virtual Machine (VKVM)</dt>
   <dd>The Virtual Machine providing compute for this provider implementation (i.e. an Amazon EC2 Instance)</dd>
   <dt>Virtual Kubelet Virtual Machine Agent (VKVMA)</dt>
-  <dd>The <a href="https://grpc.io/">gRPC</a> agent that exposes an API to manage workloads on EC2 instances (also VKVMAgent, or just Agent)</dd>
+  <dd>The gRPC agent that exposes an API to manage workloads on EC2 instances (also VKVMAgent, or just Agent)</dd>
 </dl>
 
 ### Mapping to Kubernetes components
@@ -30,6 +31,7 @@ AWS Virtual Kubelet aims to provide an extension to your Kubernetes cluster that
 **pod** → EC2 Instance + VKVMAgent + Custom Workload  
 
 ## Prerequisites
+The following are required to build and deploy this project.  Additional tools may be needed to utilize examples or set up a development environment.
 
 ### Go (lang)
 
@@ -52,13 +54,30 @@ This project uses this [Go Project Layout](https://github.com/golang-standards/p
 - [node-cli](https://github.com/virtual-kubelet/node-cli)
   - abstracts the VK provider command interface into a separate, reusable project[^1]
 
-[^1]: Previously VK providers were either part of the `virtual-kubelet` repository, or copied cmd code into their own repo
+Example files that require updating placeholders with actual (environment-specific) data are copied to `./local` before modification.  The `local` directory's contents are ignored, which prevents accidental commits and _leaking_ account numbers, etc. into the GitHub repo.
 
 ## Setup
 
 For local development and testing setup see [DevSetup.md](docs/DevSetup.md)
 
-To configure a pipeline and cluster in AWS see [PipelineSetup.md](docs/PipelineSetup.md)
+1. Run `kubectl apply -f deploy/vk-clusterrole_binding.yaml` to deploy the cluster role and binding.
+
+### ConfigMap
+The [ConfigMap](https://kubernetes.io/docs/concepts/configuration/configmap/) provides global and default VK/VKP configuration elements.  Some of these settings may be overridden on a per-pod basis.
+
+1. Copy the provided [examples/config-map.yaml](examples/config-map.yaml) to the `./local` dir and modify as-needed.  See [Config](docs/Config.md) for a detailed explanation of the various configuration options.
+
+2. Next, run `kubectl apply -f local/config-map.yaml` to deploy the config map.
+
+### StatefulSet
+This configuration will deploy a set of VK providers using the docker image built and pushed earlier.
+
+1. Copy the provided [examples/vk-statefulset.yaml](examples/vk-statefulset.yaml) file to `./local`.
+2. Replace these placeholders in the `image:` reference with the values from your account/environment
+   1. `AWS_ACCOUNT_ID`
+   2. `AWS_REGION`
+   3. `DOCKER_TAG`
+3. Run `kubectl apply -f local/vk-statefulset.yaml` to deploy the VK provider pods.
 
 ## Usage
 
