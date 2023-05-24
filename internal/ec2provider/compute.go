@@ -49,7 +49,8 @@ func NewComputeManager(ctx context.Context) (*computeManager, error) {
 }
 
 // GetCompute obtains compute for the given pod.  This compute may come from a Warm Pool, newly created EC2
-//  instance, or other appropriate source
+//
+//	instance, or other appropriate source
 func (c *computeManager) GetCompute(ctx context.Context, p *Ec2Provider, pod *corev1.Pod) (string, string, error) {
 	// if we already have an instance associated with this pod, just find and return that
 	if c.podHasInstance(ctx, pod) {
@@ -129,7 +130,7 @@ func (c *computeManager) DeleteCompute(ctx context.Context, p *Ec2Provider, pod 
 	return c.deleteCompute(ctx, pod)
 }
 
-//func (c *computeManager) createCompute(ctx context.Context, p *Ec2Provider, pod *corev1.Pod) (*interface{}, error) {
+// func (c *computeManager) createCompute(ctx context.Context, p *Ec2Provider, pod *corev1.Pod) (*interface{}, error) {
 func (c *computeManager) createCompute(ctx context.Context, pod *corev1.Pod) (string, string, error) {
 	cfg := config.Config()
 

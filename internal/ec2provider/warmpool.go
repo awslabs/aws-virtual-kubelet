@@ -416,7 +416,7 @@ func (wpm *WarmPoolManager) GetWarmPoolInstanceIfExist(ctx context.Context) (ins
 	return ec2.InstanceID, ec2.PrivateIP, true
 }
 
-//TerminateInstance provides a way to terminate an EC2 instance.
+// TerminateInstance provides a way to terminate an EC2 instance.
 // To be explicitly used for Warmpool Management and prefer DeletePod once a Pod is set.
 func (wpm *WarmPoolManager) TerminateInstance(ctx context.Context, instanceID string) (resp string, err error) {
 
@@ -424,7 +424,7 @@ func (wpm *WarmPoolManager) TerminateInstance(ctx context.Context, instanceID st
 	return resp, err
 }
 
-//RemoveFromWarmPool finds and removes an EC2 info from WarmPool Cache
+// RemoveFromWarmPool finds and removes an EC2 info from WarmPool Cache
 func RemoveFromWarmPool(ec2 Ec2Info) (err error) {
 	VKState.Lock()
 	defer VKState.Unlock()
@@ -434,7 +434,7 @@ func RemoveFromWarmPool(ec2 Ec2Info) (err error) {
 	return nil
 }
 
-//RemoveFromReadyState mutates Virtual Kubelet state to remove a particular EC2 from VK Ready State.
+// RemoveFromReadyState mutates Virtual Kubelet state to remove a particular EC2 from VK Ready State.
 func RemoveFromReadyState(ec2 Ec2Info) (err error) {
 	VKState.Lock()
 	defer VKState.Unlock()
@@ -442,7 +442,7 @@ func RemoveFromReadyState(ec2 Ec2Info) (err error) {
 	return nil
 }
 
-//RemoveFromUnhealthyState mutates Virtual Kubelet state to remove a particular EC2 from VK Ready State.
+// RemoveFromUnhealthyState mutates Virtual Kubelet state to remove a particular EC2 from VK Ready State.
 func RemoveFromUnhealthyState(ec2 Ec2Info) (err error) {
 	VKState.Lock()
 	defer VKState.Unlock()

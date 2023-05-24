@@ -56,7 +56,7 @@ func NewS3Client() (*S3Client, error) {
 	}, nil
 }
 
-//PresignGetObject Returns the HTTP response of Getting a presigned URL to a S3 Object
+// PresignGetObject Returns the HTTP response of Getting a presigned URL to a S3 Object
 func (client *S3Client) PresignGetObject(ctx context.Context, params *s3.GetObjectInput) (*v4.PresignedHTTPRequest, error) {
 	return client.PresignSvc.PresignGetObject(ctx, params)
 }

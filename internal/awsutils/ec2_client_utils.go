@@ -30,7 +30,7 @@ type UserData struct {
 	PresignedURL   string `json:"bootstrap-agent-download-url"`
 }
 
-//SecurityGroupNametoID translates a list of SG names (e.g. mySecurityGroup) to SG IDs (e.g. sg-xxxxxxxx)
+// SecurityGroupNametoID translates a list of SG names (e.g. mySecurityGroup) to SG IDs (e.g. sg-xxxxxxxx)
 func (client *Client) SecurityGroupNametoID(ctx context.Context, sgNames []string) (sgIDs []string, err error) {
 	input := ec2.DescribeSecurityGroupsInput{
 		Filters: []types.Filter{
@@ -86,17 +86,20 @@ func EC2RunInstancesUtil(
 	return resp, err
 }
 
-//GenerateVKVMUserData creates a Base64 encoded string for the intended purpose of use with the EC2 RunInstances API field "UserData"
+// GenerateVKVMUserData creates a Base64 encoded string for the intended purpose of use with the EC2 RunInstances API field "UserData"
 // Inputs:
-//	ctx: Context for all requests in this function.
-// 	s3api: The API to attempt to download information from.
-// 	bootstrapS3Bucket: S3 Bucket location for Bootstrap Agent e.g. bootstrap-agent-bucket
-//  bootstrapS3Key: S3 Key location for Boostrap Agent. e.g. vkvmagent-0.4.0-8
-//  VMInit: Instructions to execute on EC2 VM Startup. Downloads bootstrap agent.
-//  BootstrapAgent: Instructions to execute after VMInit to startup bootstrap agent.
+//
+//		ctx: Context for all requests in this function.
+//		s3api: The API to attempt to download information from.
+//		bootstrapS3Bucket: S3 Bucket location for Bootstrap Agent e.g. bootstrap-agent-bucket
+//	 bootstrapS3Key: S3 Key location for Boostrap Agent. e.g. vkvmagent-0.4.0-8
+//	 VMInit: Instructions to execute on EC2 VM Startup. Downloads bootstrap agent.
+//	 BootstrapAgent: Instructions to execute after VMInit to startup bootstrap agent.
+//
 // Outputs:
-//  userdata: base 64 encoded string with presigned URL to download and initialize the bootstrap agent
-//  err: any error that might occur as part of attempting to generate UserData
+//
+//	userdata: base 64 encoded string with presigned URL to download and initialize the bootstrap agent
+//	err: any error that might occur as part of attempting to generate UserData
 func GenerateVKVMUserData(ctx context.Context, bootstrapS3Bucket string, bootstrapS3Key string, VMInit string, BootstrapAgent string) (userdata string, err error) {
 	s3api, err := NewS3Client()
 	if err != nil {

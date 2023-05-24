@@ -13,7 +13,7 @@ import (
 	"strings"
 )
 
-//TrimmedStringSplit returns a list of strings with their whitespaces removed from the head or tail of the string.
+// TrimmedStringSplit returns a list of strings with their whitespaces removed from the head or tail of the string.
 func TrimmedStringSplit(input string, sep string) []string {
 	interimString := strings.Split(input, sep)
 	for i, substring := range interimString {
