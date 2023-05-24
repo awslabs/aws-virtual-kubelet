@@ -13,6 +13,10 @@ import (
 )
 
 // Returns a list of all buckets owned by the authenticated sender of the request.
+// To use this operation, you must have the s3:ListAllMyBuckets permission. For
+// information about Amazon S3 buckets, see Creating, configuring, and working
+// with Amazon S3 buckets (https://docs.aws.amazon.com/AmazonS3/latest/userguide/creating-buckets-s3.html)
+// .
 func (c *Client) ListBuckets(ctx context.Context, params *ListBucketsInput, optFns ...func(*Options)) (*ListBucketsOutput, error) {
 	if params == nil {
 		params = &ListBucketsInput{}
@@ -29,11 +33,12 @@ func (c *Client) ListBuckets(ctx context.Context, params *ListBucketsInput, optF
 }
 
 type ListBucketsInput struct {
+	noSmithyDocumentSerde
 }
 
 type ListBucketsOutput struct {
 
-	// The list of buckets owned by the requestor.
+	// The list of buckets owned by the requester.
 	Buckets []types.Bucket
 
 	// The owner of the buckets listed.
@@ -41,6 +46,8 @@ type ListBucketsOutput struct {
 
 	// Metadata pertaining to the operation's result.
 	ResultMetadata middleware.Metadata
+
+	noSmithyDocumentSerde
 }
 
 func (c *Client) addOperationListBucketsMiddlewares(stack *middleware.Stack, options Options) (err error) {
@@ -88,10 +95,16 @@ func (c *Client) addOperationListBucketsMiddlewares(stack *middleware.Stack, opt
 	if err = smithyhttp.AddCloseResponseBodyMiddleware(stack); err != nil {
 		return err
 	}
+	if err = swapWithCustomHTTPSignerMiddleware(stack, options); err != nil {
+		return err
+	}
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opListBuckets(options.Region), middleware.Before); err != nil {
 		return err
 	}
 	if err = addMetadataRetrieverMiddleware(stack); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addListBucketsUpdateEndpoint(stack, options); err != nil {
@@ -126,13 +139,13 @@ func addListBucketsUpdateEndpoint(stack *middleware.Stack, options Options) erro
 		Accessor: s3cust.UpdateEndpointParameterAccessor{
 			GetBucketFromInput: nopGetBucketAccessor,
 		},
-		UsePathStyle:            options.UsePathStyle,
-		UseAccelerate:           options.UseAccelerate,
-		SupportsAccelerate:      false,
-		TargetS3ObjectLambda:    false,
-		EndpointResolver:        options.EndpointResolver,
-		EndpointResolverOptions: options.EndpointOptions,
-		UseDualstack:            options.UseDualstack,
-		UseARNRegion:            options.UseARNRegion,
+		UsePathStyle:                   options.UsePathStyle,
+		UseAccelerate:                  options.UseAccelerate,
+		SupportsAccelerate:             false,
+		TargetS3ObjectLambda:           false,
+		EndpointResolver:               options.EndpointResolver,
+		EndpointResolverOptions:        options.EndpointOptions,
+		UseARNRegion:                   options.UseARNRegion,
+		DisableMultiRegionAccessPoints: options.DisableMultiRegionAccessPoints,
 	})
 }

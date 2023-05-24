@@ -17,33 +17,21 @@ import (
 // does not return more than 100 configurations at a time. You should always check
 // the IsTruncated element in the response. If there are no more configurations to
 // list, IsTruncated is set to false. If there are more configurations to list,
-// IsTruncated is set to true, and there will be a value in NextContinuationToken.
+// IsTruncated is set to true, and there will be a value in NextContinuationToken .
 // You use the NextContinuationToken value to continue the pagination of the list
 // by passing the value in continuation-token in the request to GET the next page.
 // To use this operation, you must have permissions to perform the
 // s3:GetAnalyticsConfiguration action. The bucket owner has this permission by
 // default. The bucket owner can grant this permission to others. For more
 // information about permissions, see Permissions Related to Bucket Subresource
-// Operations
-// (https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-with-s3-actions.html#using-with-s3-actions-related-to-bucket-subresources)
-// and Managing Access Permissions to Your Amazon S3 Resources
-// (https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-access-control.html).
-// For information about Amazon S3 analytics feature, see Amazon S3 Analytics –
-// Storage Class Analysis
-// (https://docs.aws.amazon.com/AmazonS3/latest/dev/analytics-storage-class.html).
-// The following operations are related to ListBucketAnalyticsConfigurations:
-//
-// *
-// GetBucketAnalyticsConfiguration
-// (https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetBucketAnalyticsConfiguration.html)
-//
-// *
-// DeleteBucketAnalyticsConfiguration
-// (https://docs.aws.amazon.com/AmazonS3/latest/API/API_DeleteBucketAnalyticsConfiguration.html)
-//
-// *
-// PutBucketAnalyticsConfiguration
-// (https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutBucketAnalyticsConfiguration.html)
+// Operations (https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-with-s3-actions.html#using-with-s3-actions-related-to-bucket-subresources)
+// and Managing Access Permissions to Your Amazon S3 Resources (https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-access-control.html)
+// . For information about Amazon S3 analytics feature, see Amazon S3 Analytics –
+// Storage Class Analysis (https://docs.aws.amazon.com/AmazonS3/latest/dev/analytics-storage-class.html)
+// . The following operations are related to ListBucketAnalyticsConfigurations :
+//   - GetBucketAnalyticsConfiguration (https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetBucketAnalyticsConfiguration.html)
+//   - DeleteBucketAnalyticsConfiguration (https://docs.aws.amazon.com/AmazonS3/latest/API/API_DeleteBucketAnalyticsConfiguration.html)
+//   - PutBucketAnalyticsConfiguration (https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutBucketAnalyticsConfiguration.html)
 func (c *Client) ListBucketAnalyticsConfigurations(ctx context.Context, params *ListBucketAnalyticsConfigurationsInput, optFns ...func(*Options)) (*ListBucketAnalyticsConfigurationsOutput, error) {
 	if params == nil {
 		params = &ListBucketAnalyticsConfigurationsInput{}
@@ -71,8 +59,11 @@ type ListBucketAnalyticsConfigurationsInput struct {
 	ContinuationToken *string
 
 	// The account ID of the expected bucket owner. If the bucket is owned by a
-	// different account, the request will fail with an HTTP 403 (Access Denied) error.
+	// different account, the request fails with the HTTP status code 403 Forbidden
+	// (access denied).
 	ExpectedBucketOwner *string
+
+	noSmithyDocumentSerde
 }
 
 type ListBucketAnalyticsConfigurationsOutput struct {
@@ -91,11 +82,13 @@ type ListBucketAnalyticsConfigurationsOutput struct {
 
 	// NextContinuationToken is sent when isTruncated is true, which indicates that
 	// there are more analytics configurations to list. The next request must include
-	// this NextContinuationToken. The token is obfuscated and is not a usable value.
+	// this NextContinuationToken . The token is obfuscated and is not a usable value.
 	NextContinuationToken *string
 
 	// Metadata pertaining to the operation's result.
 	ResultMetadata middleware.Metadata
+
+	noSmithyDocumentSerde
 }
 
 func (c *Client) addOperationListBucketAnalyticsConfigurationsMiddlewares(stack *middleware.Stack, options Options) (err error) {
@@ -143,6 +136,9 @@ func (c *Client) addOperationListBucketAnalyticsConfigurationsMiddlewares(stack 
 	if err = smithyhttp.AddCloseResponseBodyMiddleware(stack); err != nil {
 		return err
 	}
+	if err = swapWithCustomHTTPSignerMiddleware(stack, options); err != nil {
+		return err
+	}
 	if err = addOpListBucketAnalyticsConfigurationsValidationMiddleware(stack); err != nil {
 		return err
 	}
@@ -150,6 +146,9 @@ func (c *Client) addOperationListBucketAnalyticsConfigurationsMiddlewares(stack 
 		return err
 	}
 	if err = addMetadataRetrieverMiddleware(stack); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addListBucketAnalyticsConfigurationsUpdateEndpoint(stack, options); err != nil {
@@ -194,13 +193,13 @@ func addListBucketAnalyticsConfigurationsUpdateEndpoint(stack *middleware.Stack,
 		Accessor: s3cust.UpdateEndpointParameterAccessor{
 			GetBucketFromInput: getListBucketAnalyticsConfigurationsBucketMember,
 		},
-		UsePathStyle:            options.UsePathStyle,
-		UseAccelerate:           options.UseAccelerate,
-		SupportsAccelerate:      true,
-		TargetS3ObjectLambda:    false,
-		EndpointResolver:        options.EndpointResolver,
-		EndpointResolverOptions: options.EndpointOptions,
-		UseDualstack:            options.UseDualstack,
-		UseARNRegion:            options.UseARNRegion,
+		UsePathStyle:                   options.UsePathStyle,
+		UseAccelerate:                  options.UseAccelerate,
+		SupportsAccelerate:             true,
+		TargetS3ObjectLambda:           false,
+		EndpointResolver:               options.EndpointResolver,
+		EndpointResolverOptions:        options.EndpointOptions,
+		UseARNRegion:                   options.UseARNRegion,
+		DisableMultiRegionAccessPoints: options.DisableMultiRegionAccessPoints,
 	})
 }

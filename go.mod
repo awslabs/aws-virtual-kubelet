@@ -6,7 +6,7 @@ require (
 	github.com/aws/aws-sdk-go-v2 v1.18.0
 	github.com/aws/aws-sdk-go-v2/config v1.1.7
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.16.0
-	github.com/aws/aws-sdk-go-v2/service/s3 v1.11.0
+	github.com/aws/aws-sdk-go-v2/service/s3 v1.33.1
 	github.com/creasty/defaults v1.7.0
 	github.com/gogo/googleapis v1.4.1
 	github.com/golang/mock v1.6.0
@@ -30,12 +30,17 @@ require (
 require (
 	github.com/PuerkitoBio/purell v1.1.1 // indirect
 	github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 // indirect
+	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.4.10 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.1.7 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.0.7 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.33 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.4.27 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/ini v1.0.0 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.2.0 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.3.0 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.5.0 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/v4a v1.0.25 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.9.11 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.1.28 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.9.27 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.14.2 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sso v1.1.6 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.3.1 // indirect
 	github.com/aws/smithy-go v1.13.5 // indirect

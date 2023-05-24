@@ -13,25 +13,23 @@ import (
 
 // This implementation of the DELETE action uses the policy subresource to delete
 // the policy of a specified bucket. If you are using an identity other than the
-// root user of the AWS account that owns the bucket, the calling identity must
-// have the DeleteBucketPolicy permissions on the specified bucket and belong to
-// the bucket owner's account to use this operation. If you don't have
-// DeleteBucketPolicy permissions, Amazon S3 returns a 403 Access Denied error. If
-// you have the correct permissions, but you're not using an identity that belongs
-// to the bucket owner's account, Amazon S3 returns a 405 Method Not Allowed error.
-// As a security precaution, the root user of the AWS account that owns a bucket
-// can always use this operation, even if the policy explicitly denies the root
-// user the ability to perform this action. For more information about bucket
-// policies, see Using Bucket Policies and UserPolicies
-// (https://docs.aws.amazon.com/AmazonS3/latest/dev/using-iam-policies.html). The
-// following operations are related to DeleteBucketPolicy
-//
-// * CreateBucket
-// (https://docs.aws.amazon.com/AmazonS3/latest/API/API_CreateBucket.html)
-//
-// *
-// DeleteObject
-// (https://docs.aws.amazon.com/AmazonS3/latest/API/API_DeleteObject.html)
+// root user of the Amazon Web Services account that owns the bucket, the calling
+// identity must have the DeleteBucketPolicy permissions on the specified bucket
+// and belong to the bucket owner's account to use this operation. If you don't
+// have DeleteBucketPolicy permissions, Amazon S3 returns a 403 Access Denied
+// error. If you have the correct permissions, but you're not using an identity
+// that belongs to the bucket owner's account, Amazon S3 returns a 405 Method Not
+// Allowed error. To ensure that bucket owners don't inadvertently lock themselves
+// out of their own buckets, the root principal in a bucket owner's Amazon Web
+// Services account can perform the GetBucketPolicy , PutBucketPolicy , and
+// DeleteBucketPolicy API actions, even if their bucket policy explicitly denies
+// the root principal's access. Bucket owner root principals can only be blocked
+// from performing these API actions by VPC endpoint policies and Amazon Web
+// Services Organizations policies. For more information about bucket policies, see
+// Using Bucket Policies and UserPolicies (https://docs.aws.amazon.com/AmazonS3/latest/dev/using-iam-policies.html)
+// . The following operations are related to DeleteBucketPolicy
+//   - CreateBucket (https://docs.aws.amazon.com/AmazonS3/latest/API/API_CreateBucket.html)
+//   - DeleteObject (https://docs.aws.amazon.com/AmazonS3/latest/API/API_DeleteObject.html)
 func (c *Client) DeleteBucketPolicy(ctx context.Context, params *DeleteBucketPolicyInput, optFns ...func(*Options)) (*DeleteBucketPolicyOutput, error) {
 	if params == nil {
 		params = &DeleteBucketPolicyInput{}
@@ -55,13 +53,18 @@ type DeleteBucketPolicyInput struct {
 	Bucket *string
 
 	// The account ID of the expected bucket owner. If the bucket is owned by a
-	// different account, the request will fail with an HTTP 403 (Access Denied) error.
+	// different account, the request fails with the HTTP status code 403 Forbidden
+	// (access denied).
 	ExpectedBucketOwner *string
+
+	noSmithyDocumentSerde
 }
 
 type DeleteBucketPolicyOutput struct {
 	// Metadata pertaining to the operation's result.
 	ResultMetadata middleware.Metadata
+
+	noSmithyDocumentSerde
 }
 
 func (c *Client) addOperationDeleteBucketPolicyMiddlewares(stack *middleware.Stack, options Options) (err error) {
@@ -109,6 +112,9 @@ func (c *Client) addOperationDeleteBucketPolicyMiddlewares(stack *middleware.Sta
 	if err = smithyhttp.AddCloseResponseBodyMiddleware(stack); err != nil {
 		return err
 	}
+	if err = swapWithCustomHTTPSignerMiddleware(stack, options); err != nil {
+		return err
+	}
 	if err = addOpDeleteBucketPolicyValidationMiddleware(stack); err != nil {
 		return err
 	}
@@ -116,6 +122,9 @@ func (c *Client) addOperationDeleteBucketPolicyMiddlewares(stack *middleware.Sta
 		return err
 	}
 	if err = addMetadataRetrieverMiddleware(stack); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addDeleteBucketPolicyUpdateEndpoint(stack, options); err != nil {
@@ -160,13 +169,13 @@ func addDeleteBucketPolicyUpdateEndpoint(stack *middleware.Stack, options Option
 		Accessor: s3cust.UpdateEndpointParameterAccessor{
 			GetBucketFromInput: getDeleteBucketPolicyBucketMember,
 		},
-		UsePathStyle:            options.UsePathStyle,
-		UseAccelerate:           options.UseAccelerate,
-		SupportsAccelerate:      true,
-		TargetS3ObjectLambda:    false,
-		EndpointResolver:        options.EndpointResolver,
-		EndpointResolverOptions: options.EndpointOptions,
-		UseDualstack:            options.UseDualstack,
-		UseARNRegion:            options.UseARNRegion,
+		UsePathStyle:                   options.UsePathStyle,
+		UseAccelerate:                  options.UseAccelerate,
+		SupportsAccelerate:             true,
+		TargetS3ObjectLambda:           false,
+		EndpointResolver:               options.EndpointResolver,
+		EndpointResolverOptions:        options.EndpointOptions,
+		UseARNRegion:                   options.UseARNRegion,
+		DisableMultiRegionAccessPoints: options.DisableMultiRegionAccessPoints,
 	})
 }

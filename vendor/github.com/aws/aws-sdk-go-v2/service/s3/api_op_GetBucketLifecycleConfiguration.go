@@ -12,51 +12,31 @@ import (
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
-// Bucket lifecycle configuration now supports specifying a lifecycle rule using an
-// object key name prefix, one or more object tags, or a combination of both.
+// Bucket lifecycle configuration now supports specifying a lifecycle rule using
+// an object key name prefix, one or more object tags, or a combination of both.
 // Accordingly, this section describes the latest API. The response describes the
 // new filter element that you can use to specify a filter to select a subset of
 // objects to which the rule applies. If you are using a previous version of the
 // lifecycle configuration, it still works. For the earlier action, see
-// GetBucketLifecycle
-// (https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetBucketLifecycle.html).
-// Returns the lifecycle configuration information set on the bucket. For
-// information about lifecycle configuration, see Object Lifecycle Management
-// (https://docs.aws.amazon.com/AmazonS3/latest/dev/object-lifecycle-mgmt.html). To
-// use this operation, you must have permission to perform the
+// GetBucketLifecycle (https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetBucketLifecycle.html)
+// . Returns the lifecycle configuration information set on the bucket. For
+// information about lifecycle configuration, see Object Lifecycle Management (https://docs.aws.amazon.com/AmazonS3/latest/dev/object-lifecycle-mgmt.html)
+// . To use this operation, you must have permission to perform the
 // s3:GetLifecycleConfiguration action. The bucket owner has this permission, by
 // default. The bucket owner can grant this permission to others. For more
 // information about permissions, see Permissions Related to Bucket Subresource
-// Operations
-// (https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-with-s3-actions.html#using-with-s3-actions-related-to-bucket-subresources)
-// and Managing Access Permissions to Your Amazon S3 Resources
-// (https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-access-control.html).
-// GetBucketLifecycleConfiguration has the following special error:
+// Operations (https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-with-s3-actions.html#using-with-s3-actions-related-to-bucket-subresources)
+// and Managing Access Permissions to Your Amazon S3 Resources (https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-access-control.html)
+// . GetBucketLifecycleConfiguration has the following special error:
+//   - Error code: NoSuchLifecycleConfiguration
+//   - Description: The lifecycle configuration does not exist.
+//   - HTTP Status Code: 404 Not Found
+//   - SOAP Fault Code Prefix: Client
 //
-// * Error code:
-// NoSuchLifecycleConfiguration
-//
-// * Description: The lifecycle configuration does
-// not exist.
-//
-// * HTTP Status Code: 404 Not Found
-//
-// * SOAP Fault Code Prefix:
-// Client
-//
-// The following operations are related to
-// GetBucketLifecycleConfiguration:
-//
-// * GetBucketLifecycle
-// (https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetBucketLifecycle.html)
-//
-// *
-// PutBucketLifecycle
-// (https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutBucketLifecycle.html)
-//
-// *
-// DeleteBucketLifecycle
-// (https://docs.aws.amazon.com/AmazonS3/latest/API/API_DeleteBucketLifecycle.html)
+// The following operations are related to GetBucketLifecycleConfiguration :
+//   - GetBucketLifecycle (https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetBucketLifecycle.html)
+//   - PutBucketLifecycle (https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutBucketLifecycle.html)
+//   - DeleteBucketLifecycle (https://docs.aws.amazon.com/AmazonS3/latest/API/API_DeleteBucketLifecycle.html)
 func (c *Client) GetBucketLifecycleConfiguration(ctx context.Context, params *GetBucketLifecycleConfigurationInput, optFns ...func(*Options)) (*GetBucketLifecycleConfigurationOutput, error) {
 	if params == nil {
 		params = &GetBucketLifecycleConfigurationInput{}
@@ -80,8 +60,11 @@ type GetBucketLifecycleConfigurationInput struct {
 	Bucket *string
 
 	// The account ID of the expected bucket owner. If the bucket is owned by a
-	// different account, the request will fail with an HTTP 403 (Access Denied) error.
+	// different account, the request fails with the HTTP status code 403 Forbidden
+	// (access denied).
 	ExpectedBucketOwner *string
+
+	noSmithyDocumentSerde
 }
 
 type GetBucketLifecycleConfigurationOutput struct {
@@ -91,6 +74,8 @@ type GetBucketLifecycleConfigurationOutput struct {
 
 	// Metadata pertaining to the operation's result.
 	ResultMetadata middleware.Metadata
+
+	noSmithyDocumentSerde
 }
 
 func (c *Client) addOperationGetBucketLifecycleConfigurationMiddlewares(stack *middleware.Stack, options Options) (err error) {
@@ -138,6 +123,9 @@ func (c *Client) addOperationGetBucketLifecycleConfigurationMiddlewares(stack *m
 	if err = smithyhttp.AddCloseResponseBodyMiddleware(stack); err != nil {
 		return err
 	}
+	if err = swapWithCustomHTTPSignerMiddleware(stack, options); err != nil {
+		return err
+	}
 	if err = addOpGetBucketLifecycleConfigurationValidationMiddleware(stack); err != nil {
 		return err
 	}
@@ -145,6 +133,9 @@ func (c *Client) addOperationGetBucketLifecycleConfigurationMiddlewares(stack *m
 		return err
 	}
 	if err = addMetadataRetrieverMiddleware(stack); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addGetBucketLifecycleConfigurationUpdateEndpoint(stack, options); err != nil {
@@ -189,13 +180,13 @@ func addGetBucketLifecycleConfigurationUpdateEndpoint(stack *middleware.Stack, o
 		Accessor: s3cust.UpdateEndpointParameterAccessor{
 			GetBucketFromInput: getGetBucketLifecycleConfigurationBucketMember,
 		},
-		UsePathStyle:            options.UsePathStyle,
-		UseAccelerate:           options.UseAccelerate,
-		SupportsAccelerate:      true,
-		TargetS3ObjectLambda:    false,
-		EndpointResolver:        options.EndpointResolver,
-		EndpointResolverOptions: options.EndpointOptions,
-		UseDualstack:            options.UseDualstack,
-		UseARNRegion:            options.UseARNRegion,
+		UsePathStyle:                   options.UsePathStyle,
+		UseAccelerate:                  options.UseAccelerate,
+		SupportsAccelerate:             true,
+		TargetS3ObjectLambda:           false,
+		EndpointResolver:               options.EndpointResolver,
+		EndpointResolverOptions:        options.EndpointOptions,
+		UseARNRegion:                   options.UseARNRegion,
+		DisableMultiRegionAccessPoints: options.DisableMultiRegionAccessPoints,
 	})
 }

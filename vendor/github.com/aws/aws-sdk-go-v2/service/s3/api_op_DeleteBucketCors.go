@@ -14,16 +14,11 @@ import (
 // Deletes the cors configuration information set for the bucket. To use this
 // operation, you must have permission to perform the s3:PutBucketCORS action. The
 // bucket owner has this permission by default and can grant this permission to
-// others. For information about cors, see Enabling Cross-Origin Resource Sharing
-// (https://docs.aws.amazon.com/AmazonS3/latest/dev/cors.html) in the Amazon S3
-// User Guide. Related Resources:
-//
-// * PutBucketCors
-// (https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutBucketCors.html)
-//
-// *
-// RESTOPTIONSobject
-// (https://docs.aws.amazon.com/AmazonS3/latest/API/RESTOPTIONSobject.html)
+// others. For information about cors , see Enabling Cross-Origin Resource Sharing (https://docs.aws.amazon.com/AmazonS3/latest/dev/cors.html)
+// in the Amazon S3 User Guide. The following operations are related to
+// DeleteBucketCors :
+//   - PutBucketCors (https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutBucketCors.html)
+//   - RESTOPTIONSobject (https://docs.aws.amazon.com/AmazonS3/latest/API/RESTOPTIONSobject.html)
 func (c *Client) DeleteBucketCors(ctx context.Context, params *DeleteBucketCorsInput, optFns ...func(*Options)) (*DeleteBucketCorsOutput, error) {
 	if params == nil {
 		params = &DeleteBucketCorsInput{}
@@ -47,13 +42,18 @@ type DeleteBucketCorsInput struct {
 	Bucket *string
 
 	// The account ID of the expected bucket owner. If the bucket is owned by a
-	// different account, the request will fail with an HTTP 403 (Access Denied) error.
+	// different account, the request fails with the HTTP status code 403 Forbidden
+	// (access denied).
 	ExpectedBucketOwner *string
+
+	noSmithyDocumentSerde
 }
 
 type DeleteBucketCorsOutput struct {
 	// Metadata pertaining to the operation's result.
 	ResultMetadata middleware.Metadata
+
+	noSmithyDocumentSerde
 }
 
 func (c *Client) addOperationDeleteBucketCorsMiddlewares(stack *middleware.Stack, options Options) (err error) {
@@ -101,6 +101,9 @@ func (c *Client) addOperationDeleteBucketCorsMiddlewares(stack *middleware.Stack
 	if err = smithyhttp.AddCloseResponseBodyMiddleware(stack); err != nil {
 		return err
 	}
+	if err = swapWithCustomHTTPSignerMiddleware(stack, options); err != nil {
+		return err
+	}
 	if err = addOpDeleteBucketCorsValidationMiddleware(stack); err != nil {
 		return err
 	}
@@ -108,6 +111,9 @@ func (c *Client) addOperationDeleteBucketCorsMiddlewares(stack *middleware.Stack
 		return err
 	}
 	if err = addMetadataRetrieverMiddleware(stack); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addDeleteBucketCorsUpdateEndpoint(stack, options); err != nil {
@@ -152,13 +158,13 @@ func addDeleteBucketCorsUpdateEndpoint(stack *middleware.Stack, options Options)
 		Accessor: s3cust.UpdateEndpointParameterAccessor{
 			GetBucketFromInput: getDeleteBucketCorsBucketMember,
 		},
-		UsePathStyle:            options.UsePathStyle,
-		UseAccelerate:           options.UseAccelerate,
-		SupportsAccelerate:      true,
-		TargetS3ObjectLambda:    false,
-		EndpointResolver:        options.EndpointResolver,
-		EndpointResolverOptions: options.EndpointOptions,
-		UseDualstack:            options.UseDualstack,
-		UseARNRegion:            options.UseARNRegion,
+		UsePathStyle:                   options.UsePathStyle,
+		UseAccelerate:                  options.UseAccelerate,
+		SupportsAccelerate:             true,
+		TargetS3ObjectLambda:           false,
+		EndpointResolver:               options.EndpointResolver,
+		EndpointResolverOptions:        options.EndpointOptions,
+		UseARNRegion:                   options.UseARNRegion,
+		DisableMultiRegionAccessPoints: options.DisableMultiRegionAccessPoints,
 	})
 }

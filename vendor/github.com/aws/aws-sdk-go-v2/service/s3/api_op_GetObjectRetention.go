@@ -13,8 +13,10 @@ import (
 )
 
 // Retrieves an object's retention settings. For more information, see Locking
-// Objects (https://docs.aws.amazon.com/AmazonS3/latest/dev/object-lock.html). This
-// action is not supported by Amazon S3 on Outposts.
+// Objects (https://docs.aws.amazon.com/AmazonS3/latest/dev/object-lock.html) .
+// This action is not supported by Amazon S3 on Outposts. The following action is
+// related to GetObjectRetention :
+//   - GetObjectAttributes (https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetObjectAttributes.html)
 func (c *Client) GetObjectRetention(ctx context.Context, params *GetObjectRetentionInput, optFns ...func(*Options)) (*GetObjectRetentionOutput, error) {
 	if params == nil {
 		params = &GetObjectRetentionInput{}
@@ -36,10 +38,9 @@ type GetObjectRetentionInput struct {
 	// retrieve. When using this action with an access point, you must direct requests
 	// to the access point hostname. The access point hostname takes the form
 	// AccessPointName-AccountId.s3-accesspoint.Region.amazonaws.com. When using this
-	// action with an access point through the AWS SDKs, you provide the access point
-	// ARN in place of the bucket name. For more information about access point ARNs,
-	// see Using access points
-	// (https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-access-points.html)
+	// action with an access point through the Amazon Web Services SDKs, you provide
+	// the access point ARN in place of the bucket name. For more information about
+	// access point ARNs, see Using access points (https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-access-points.html)
 	// in the Amazon S3 User Guide.
 	//
 	// This member is required.
@@ -51,19 +52,21 @@ type GetObjectRetentionInput struct {
 	Key *string
 
 	// The account ID of the expected bucket owner. If the bucket is owned by a
-	// different account, the request will fail with an HTTP 403 (Access Denied) error.
+	// different account, the request fails with the HTTP status code 403 Forbidden
+	// (access denied).
 	ExpectedBucketOwner *string
 
 	// Confirms that the requester knows that they will be charged for the request.
 	// Bucket owners need not specify this parameter in their requests. For information
-	// about downloading objects from requester pays buckets, see Downloading Objects
-	// in Requestor Pays Buckets
-	// (https://docs.aws.amazon.com/AmazonS3/latest/dev/ObjectsinRequesterPaysBuckets.html)
+	// about downloading objects from Requester Pays buckets, see Downloading Objects
+	// in Requester Pays Buckets (https://docs.aws.amazon.com/AmazonS3/latest/dev/ObjectsinRequesterPaysBuckets.html)
 	// in the Amazon S3 User Guide.
 	RequestPayer types.RequestPayer
 
 	// The version ID for the object whose retention settings you want to retrieve.
 	VersionId *string
+
+	noSmithyDocumentSerde
 }
 
 type GetObjectRetentionOutput struct {
@@ -73,6 +76,8 @@ type GetObjectRetentionOutput struct {
 
 	// Metadata pertaining to the operation's result.
 	ResultMetadata middleware.Metadata
+
+	noSmithyDocumentSerde
 }
 
 func (c *Client) addOperationGetObjectRetentionMiddlewares(stack *middleware.Stack, options Options) (err error) {
@@ -120,6 +125,9 @@ func (c *Client) addOperationGetObjectRetentionMiddlewares(stack *middleware.Sta
 	if err = smithyhttp.AddCloseResponseBodyMiddleware(stack); err != nil {
 		return err
 	}
+	if err = swapWithCustomHTTPSignerMiddleware(stack, options); err != nil {
+		return err
+	}
 	if err = addOpGetObjectRetentionValidationMiddleware(stack); err != nil {
 		return err
 	}
@@ -127,6 +135,9 @@ func (c *Client) addOperationGetObjectRetentionMiddlewares(stack *middleware.Sta
 		return err
 	}
 	if err = addMetadataRetrieverMiddleware(stack); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addGetObjectRetentionUpdateEndpoint(stack, options); err != nil {
@@ -171,13 +182,13 @@ func addGetObjectRetentionUpdateEndpoint(stack *middleware.Stack, options Option
 		Accessor: s3cust.UpdateEndpointParameterAccessor{
 			GetBucketFromInput: getGetObjectRetentionBucketMember,
 		},
-		UsePathStyle:            options.UsePathStyle,
-		UseAccelerate:           options.UseAccelerate,
-		SupportsAccelerate:      true,
-		TargetS3ObjectLambda:    false,
-		EndpointResolver:        options.EndpointResolver,
-		EndpointResolverOptions: options.EndpointOptions,
-		UseDualstack:            options.UseDualstack,
-		UseARNRegion:            options.UseARNRegion,
+		UsePathStyle:                   options.UsePathStyle,
+		UseAccelerate:                  options.UseAccelerate,
+		SupportsAccelerate:             true,
+		TargetS3ObjectLambda:           false,
+		EndpointResolver:               options.EndpointResolver,
+		EndpointResolverOptions:        options.EndpointOptions,
+		UseARNRegion:                   options.UseARNRegion,
+		DisableMultiRegionAccessPoints: options.DisableMultiRegionAccessPoints,
 	})
 }

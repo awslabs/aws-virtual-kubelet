@@ -3,19 +3,17 @@ package customizations
 import (
 	"context"
 	"fmt"
-	"github.com/aws/smithy-go/encoding/httpbinding"
 	"log"
 	"net/url"
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/smithy-go/middleware"
-	smithyhttp "github.com/aws/smithy-go/transport/http"
-
 	awsmiddleware "github.com/aws/aws-sdk-go-v2/aws/middleware"
 	"github.com/aws/aws-sdk-go-v2/service/internal/s3shared"
-
 	internalendpoints "github.com/aws/aws-sdk-go-v2/service/s3/internal/endpoints"
+	"github.com/aws/smithy-go/encoding/httpbinding"
+	"github.com/aws/smithy-go/middleware"
+	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
 // EndpointResolver interface for resolving service endpoints.
@@ -37,7 +35,6 @@ type UpdateEndpointParameterAccessor struct {
 
 // UpdateEndpointOptions provides the options for the UpdateEndpoint middleware setup.
 type UpdateEndpointOptions struct {
-
 	// Accessor are parameter accessors used by the middleware
 	Accessor UpdateEndpointParameterAccessor
 
@@ -49,9 +46,6 @@ type UpdateEndpointOptions struct {
 
 	// indicates if an operation supports s3 transfer acceleration.
 	SupportsAccelerate bool
-
-	// use dualstack
-	UseDualstack bool
 
 	// use ARN region
 	UseARNRegion bool
@@ -65,10 +59,15 @@ type UpdateEndpointOptions struct {
 
 	// EndpointResolverOptions used by endpoint resolver
 	EndpointResolverOptions EndpointResolverOptions
+
+	// DisableMultiRegionAccessPoints indicates multi-region access point support is disabled
+	DisableMultiRegionAccessPoints bool
 }
 
 // UpdateEndpoint adds the middleware to the middleware stack based on the UpdateEndpointOptions.
 func UpdateEndpoint(stack *middleware.Stack, options UpdateEndpointOptions) (err error) {
+	const serializerID = "OperationSerializer"
+
 	// initial arn look up middleware
 	err = stack.Initialize.Add(&s3shared.ARNLookup{
 		GetARNValue: options.Accessor.GetBucketFromInput,
@@ -79,12 +78,12 @@ func UpdateEndpoint(stack *middleware.Stack, options UpdateEndpointOptions) (err
 
 	// process arn
 	err = stack.Serialize.Insert(&processARNResource{
-		UseARNRegion:            options.UseARNRegion,
-		UseAccelerate:           options.UseAccelerate,
-		UseDualstack:            options.UseDualstack,
-		EndpointResolver:        options.EndpointResolver,
-		EndpointResolverOptions: options.EndpointResolverOptions,
-	}, "OperationSerializer", middleware.Before)
+		UseARNRegion:                   options.UseARNRegion,
+		UseAccelerate:                  options.UseAccelerate,
+		EndpointResolver:               options.EndpointResolver,
+		EndpointResolverOptions:        options.EndpointResolverOptions,
+		DisableMultiRegionAccessPoints: options.DisableMultiRegionAccessPoints,
+	}, serializerID, middleware.Before)
 	if err != nil {
 		return err
 	}
@@ -95,25 +94,15 @@ func UpdateEndpoint(stack *middleware.Stack, options UpdateEndpointOptions) (err
 	err = stack.Serialize.Insert(&s3ObjectLambdaEndpoint{
 		UseEndpoint:             options.TargetS3ObjectLambda,
 		UseAccelerate:           options.UseAccelerate,
-		UseDualstack:            options.UseDualstack,
 		EndpointResolver:        options.EndpointResolver,
 		EndpointResolverOptions: options.EndpointResolverOptions,
-	}, "OperationSerializer", middleware.Before)
+	}, serializerID, middleware.Before)
 	if err != nil {
 		return err
 	}
 
 	// remove bucket arn middleware
-	err = stack.Serialize.Insert(&removeBucketFromPathMiddleware{}, "OperationSerializer", middleware.After)
-	if err != nil {
-		return err
-	}
-
-	// enable dual stack support
-	err = stack.Serialize.Insert(&s3shared.EnableDualstack{
-		UseDualstack:     options.UseDualstack,
-		DefaultServiceID: "s3",
-	}, "OperationSerializer", middleware.After)
+	err = stack.Serialize.Insert(&removeBucketFromPathMiddleware{}, serializerID, middleware.After)
 	if err != nil {
 		return err
 	}
@@ -124,7 +113,7 @@ func UpdateEndpoint(stack *middleware.Stack, options UpdateEndpointOptions) (err
 		getBucketFromInput: options.Accessor.GetBucketFromInput,
 		useAccelerate:      options.UseAccelerate,
 		supportsAccelerate: options.SupportsAccelerate,
-	}, (*s3shared.EnableDualstack)(nil).ID(), middleware.After)
+	}, serializerID, middleware.After)
 	if err != nil {
 		return err
 	}
@@ -266,8 +255,11 @@ func removeBucketFromPath(u *url.URL, bucket string) {
 }
 
 // hostCompatibleBucketName returns true if the request should
-// put the bucket in the host. This is false if S3ForcePathStyle is
-// explicitly set or if the bucket is not DNS compatible.
+// put the bucket in the host. This is false if the bucket is not
+// DNS compatible or the EndpointResolver resolves an aws.Endpoint with
+// HostnameImmutable member set to true.
+//
+// https://pkg.go.dev/github.com/aws/aws-sdk-go-v2/aws#Endpoint.HostnameImmutable
 func hostCompatibleBucketName(u *url.URL, bucket string) bool {
 	// Bucket might be DNS compatible but dots in the hostname will fail
 	// certificate validation, so do not use host-style.

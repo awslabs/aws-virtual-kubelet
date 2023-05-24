@@ -22,60 +22,35 @@ import (
 // to a destination bucket in a different account. However, the destination bucket
 // must be in the same Region as the bucket that you are making the PUT analytics
 // configuration to. For more information, see Amazon S3 Analytics – Storage Class
-// Analysis
-// (https://docs.aws.amazon.com/AmazonS3/latest/dev/analytics-storage-class.html).
-// You must create a bucket policy on the destination bucket where the exported
+// Analysis (https://docs.aws.amazon.com/AmazonS3/latest/dev/analytics-storage-class.html)
+// . You must create a bucket policy on the destination bucket where the exported
 // file is written to grant permissions to Amazon S3 to write objects to the
 // bucket. For an example policy, see Granting Permissions for Amazon S3 Inventory
-// and Storage Class Analysis
-// (https://docs.aws.amazon.com/AmazonS3/latest/dev/example-bucket-policies.html#example-bucket-policies-use-case-9).
-// To use this operation, you must have permissions to perform the
+// and Storage Class Analysis (https://docs.aws.amazon.com/AmazonS3/latest/dev/example-bucket-policies.html#example-bucket-policies-use-case-9)
+// . To use this operation, you must have permissions to perform the
 // s3:PutAnalyticsConfiguration action. The bucket owner has this permission by
 // default. The bucket owner can grant this permission to others. For more
 // information about permissions, see Permissions Related to Bucket Subresource
-// Operations
-// (https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-with-s3-actions.html#using-with-s3-actions-related-to-bucket-subresources)
-// and Managing Access Permissions to Your Amazon S3 Resources
-// (https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-access-control.html).
-// Special Errors
+// Operations (https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-with-s3-actions.html#using-with-s3-actions-related-to-bucket-subresources)
+// and Managing Access Permissions to Your Amazon S3 Resources (https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-access-control.html)
+// . PutBucketAnalyticsConfiguration has the following special errors:
+//   - HTTP Error: HTTP 400 Bad Request
+//   - Code: InvalidArgument
+//   - Cause: Invalid argument.
+//   - HTTP Error: HTTP 400 Bad Request
+//   - Code: TooManyConfigurations
+//   - Cause: You are attempting to create a new configuration but have already
+//     reached the 1,000-configuration limit.
+//   - HTTP Error: HTTP 403 Forbidden
+//   - Code: AccessDenied
+//   - Cause: You are not the owner of the specified bucket, or you do not have
+//     the s3:PutAnalyticsConfiguration bucket permission to set the configuration on
+//     the bucket.
 //
-// * HTTP Error: HTTP 400 Bad Request
-//
-// * Code: InvalidArgument
-//
-// *
-// Cause: Invalid argument.
-//
-// * HTTP Error: HTTP 400 Bad Request
-//
-// * Code:
-// TooManyConfigurations
-//
-// * Cause: You are attempting to create a new configuration
-// but have already reached the 1,000-configuration limit.
-//
-// * HTTP Error: HTTP 403
-// Forbidden
-//
-// * Code: AccessDenied
-//
-// * Cause: You are not the owner of the specified
-// bucket, or you do not have the s3:PutAnalyticsConfiguration bucket permission to
-// set the configuration on the bucket.
-//
-// Related Resources
-//
-// *
-// GetBucketAnalyticsConfiguration
-// (https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetBucketAnalyticsConfiguration.html)
-//
-// *
-// DeleteBucketAnalyticsConfiguration
-// (https://docs.aws.amazon.com/AmazonS3/latest/API/API_DeleteBucketAnalyticsConfiguration.html)
-//
-// *
-// ListBucketAnalyticsConfigurations
-// (https://docs.aws.amazon.com/AmazonS3/latest/API/API_ListBucketAnalyticsConfigurations.html)
+// The following operations are related to PutBucketAnalyticsConfiguration :
+//   - GetBucketAnalyticsConfiguration (https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetBucketAnalyticsConfiguration.html)
+//   - DeleteBucketAnalyticsConfiguration (https://docs.aws.amazon.com/AmazonS3/latest/API/API_DeleteBucketAnalyticsConfiguration.html)
+//   - ListBucketAnalyticsConfigurations (https://docs.aws.amazon.com/AmazonS3/latest/API/API_ListBucketAnalyticsConfigurations.html)
 func (c *Client) PutBucketAnalyticsConfiguration(ctx context.Context, params *PutBucketAnalyticsConfigurationInput, optFns ...func(*Options)) (*PutBucketAnalyticsConfigurationOutput, error) {
 	if params == nil {
 		params = &PutBucketAnalyticsConfigurationInput{}
@@ -109,13 +84,18 @@ type PutBucketAnalyticsConfigurationInput struct {
 	Id *string
 
 	// The account ID of the expected bucket owner. If the bucket is owned by a
-	// different account, the request will fail with an HTTP 403 (Access Denied) error.
+	// different account, the request fails with the HTTP status code 403 Forbidden
+	// (access denied).
 	ExpectedBucketOwner *string
+
+	noSmithyDocumentSerde
 }
 
 type PutBucketAnalyticsConfigurationOutput struct {
 	// Metadata pertaining to the operation's result.
 	ResultMetadata middleware.Metadata
+
+	noSmithyDocumentSerde
 }
 
 func (c *Client) addOperationPutBucketAnalyticsConfigurationMiddlewares(stack *middleware.Stack, options Options) (err error) {
@@ -163,6 +143,9 @@ func (c *Client) addOperationPutBucketAnalyticsConfigurationMiddlewares(stack *m
 	if err = smithyhttp.AddCloseResponseBodyMiddleware(stack); err != nil {
 		return err
 	}
+	if err = swapWithCustomHTTPSignerMiddleware(stack, options); err != nil {
+		return err
+	}
 	if err = addOpPutBucketAnalyticsConfigurationValidationMiddleware(stack); err != nil {
 		return err
 	}
@@ -170,6 +153,9 @@ func (c *Client) addOperationPutBucketAnalyticsConfigurationMiddlewares(stack *m
 		return err
 	}
 	if err = addMetadataRetrieverMiddleware(stack); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addPutBucketAnalyticsConfigurationUpdateEndpoint(stack, options); err != nil {
@@ -214,13 +200,13 @@ func addPutBucketAnalyticsConfigurationUpdateEndpoint(stack *middleware.Stack, o
 		Accessor: s3cust.UpdateEndpointParameterAccessor{
 			GetBucketFromInput: getPutBucketAnalyticsConfigurationBucketMember,
 		},
-		UsePathStyle:            options.UsePathStyle,
-		UseAccelerate:           options.UseAccelerate,
-		SupportsAccelerate:      true,
-		TargetS3ObjectLambda:    false,
-		EndpointResolver:        options.EndpointResolver,
-		EndpointResolverOptions: options.EndpointOptions,
-		UseDualstack:            options.UseDualstack,
-		UseARNRegion:            options.UseARNRegion,
+		UsePathStyle:                   options.UsePathStyle,
+		UseAccelerate:                  options.UseAccelerate,
+		SupportsAccelerate:             true,
+		TargetS3ObjectLambda:           false,
+		EndpointResolver:               options.EndpointResolver,
+		EndpointResolverOptions:        options.EndpointOptions,
+		UseARNRegion:                   options.UseARNRegion,
+		DisableMultiRegionAccessPoints: options.DisableMultiRegionAccessPoints,
 	})
 }

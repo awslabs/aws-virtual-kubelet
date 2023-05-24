@@ -11,25 +11,19 @@ import (
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
-// Deletes the lifecycle configuration from the specified bucket. Amazon S3 removes
-// all the lifecycle configuration rules in the lifecycle subresource associated
-// with the bucket. Your objects never expire, and Amazon S3 no longer
+// Deletes the lifecycle configuration from the specified bucket. Amazon S3
+// removes all the lifecycle configuration rules in the lifecycle subresource
+// associated with the bucket. Your objects never expire, and Amazon S3 no longer
 // automatically deletes any objects on the basis of rules contained in the deleted
 // lifecycle configuration. To use this operation, you must have permission to
 // perform the s3:PutLifecycleConfiguration action. By default, the bucket owner
 // has this permission and the bucket owner can grant this permission to others.
 // There is usually some time lag before lifecycle configuration deletion is fully
 // propagated to all the Amazon S3 systems. For more information about the object
-// expiration, see Elements to Describe Lifecycle Actions
-// (https://docs.aws.amazon.com/AmazonS3/latest/dev/intro-lifecycle-rules.html#intro-lifecycle-rules-actions).
-// Related actions include:
-//
-// * PutBucketLifecycleConfiguration
-// (https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutBucketLifecycleConfiguration.html)
-//
-// *
-// GetBucketLifecycleConfiguration
-// (https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetBucketLifecycleConfiguration.html)
+// expiration, see Elements to Describe Lifecycle Actions (https://docs.aws.amazon.com/AmazonS3/latest/dev/intro-lifecycle-rules.html#intro-lifecycle-rules-actions)
+// . Related actions include:
+//   - PutBucketLifecycleConfiguration (https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutBucketLifecycleConfiguration.html)
+//   - GetBucketLifecycleConfiguration (https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetBucketLifecycleConfiguration.html)
 func (c *Client) DeleteBucketLifecycle(ctx context.Context, params *DeleteBucketLifecycleInput, optFns ...func(*Options)) (*DeleteBucketLifecycleOutput, error) {
 	if params == nil {
 		params = &DeleteBucketLifecycleInput{}
@@ -53,13 +47,18 @@ type DeleteBucketLifecycleInput struct {
 	Bucket *string
 
 	// The account ID of the expected bucket owner. If the bucket is owned by a
-	// different account, the request will fail with an HTTP 403 (Access Denied) error.
+	// different account, the request fails with the HTTP status code 403 Forbidden
+	// (access denied).
 	ExpectedBucketOwner *string
+
+	noSmithyDocumentSerde
 }
 
 type DeleteBucketLifecycleOutput struct {
 	// Metadata pertaining to the operation's result.
 	ResultMetadata middleware.Metadata
+
+	noSmithyDocumentSerde
 }
 
 func (c *Client) addOperationDeleteBucketLifecycleMiddlewares(stack *middleware.Stack, options Options) (err error) {
@@ -107,6 +106,9 @@ func (c *Client) addOperationDeleteBucketLifecycleMiddlewares(stack *middleware.
 	if err = smithyhttp.AddCloseResponseBodyMiddleware(stack); err != nil {
 		return err
 	}
+	if err = swapWithCustomHTTPSignerMiddleware(stack, options); err != nil {
+		return err
+	}
 	if err = addOpDeleteBucketLifecycleValidationMiddleware(stack); err != nil {
 		return err
 	}
@@ -114,6 +116,9 @@ func (c *Client) addOperationDeleteBucketLifecycleMiddlewares(stack *middleware.
 		return err
 	}
 	if err = addMetadataRetrieverMiddleware(stack); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addDeleteBucketLifecycleUpdateEndpoint(stack, options); err != nil {
@@ -158,13 +163,13 @@ func addDeleteBucketLifecycleUpdateEndpoint(stack *middleware.Stack, options Opt
 		Accessor: s3cust.UpdateEndpointParameterAccessor{
 			GetBucketFromInput: getDeleteBucketLifecycleBucketMember,
 		},
-		UsePathStyle:            options.UsePathStyle,
-		UseAccelerate:           options.UseAccelerate,
-		SupportsAccelerate:      true,
-		TargetS3ObjectLambda:    false,
-		EndpointResolver:        options.EndpointResolver,
-		EndpointResolverOptions: options.EndpointOptions,
-		UseDualstack:            options.UseDualstack,
-		UseARNRegion:            options.UseARNRegion,
+		UsePathStyle:                   options.UsePathStyle,
+		UseAccelerate:                  options.UseAccelerate,
+		SupportsAccelerate:             true,
+		TargetS3ObjectLambda:           false,
+		EndpointResolver:               options.EndpointResolver,
+		EndpointResolverOptions:        options.EndpointOptions,
+		UseARNRegion:                   options.UseARNRegion,
+		DisableMultiRegionAccessPoints: options.DisableMultiRegionAccessPoints,
 	})
 }

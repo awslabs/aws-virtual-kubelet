@@ -15,27 +15,22 @@ import (
 // Removes the null version (if there is one) of an object and inserts a delete
 // marker, which becomes the latest version of the object. If there isn't a null
 // version, Amazon S3 does not remove any objects but will still respond that the
-// command was successful. To remove a specific version, you must be the bucket
-// owner and you must use the version Id subresource. Using this subresource
-// permanently deletes the version. If the object deleted is a delete marker,
-// Amazon S3 sets the response header, x-amz-delete-marker, to true. If the object
-// you want to delete is in a bucket where the bucket versioning configuration is
-// MFA Delete enabled, you must include the x-amz-mfa request header in the DELETE
-// versionId request. Requests that include x-amz-mfa must use HTTPS. For more
-// information about MFA Delete, see Using MFA Delete
-// (https://docs.aws.amazon.com/AmazonS3/latest/dev/UsingMFADelete.html). To see
-// sample requests that use versioning, see Sample Request
-// (https://docs.aws.amazon.com/AmazonS3/latest/API/RESTObjectDELETE.html#ExampleVersionObjectDelete).
-// You can delete objects by explicitly calling DELETE Object or configure its
-// lifecycle (PutBucketLifecycle
-// (https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutBucketLifecycle.html))
-// to enable Amazon S3 to remove them for you. If you want to block users or
+// command was successful. To remove a specific version, you must use the version
+// Id subresource. Using this subresource permanently deletes the version. If the
+// object deleted is a delete marker, Amazon S3 sets the response header,
+// x-amz-delete-marker , to true. If the object you want to delete is in a bucket
+// where the bucket versioning configuration is MFA Delete enabled, you must
+// include the x-amz-mfa request header in the DELETE versionId request. Requests
+// that include x-amz-mfa must use HTTPS. For more information about MFA Delete,
+// see Using MFA Delete (https://docs.aws.amazon.com/AmazonS3/latest/dev/UsingMFADelete.html)
+// . To see sample requests that use versioning, see Sample Request (https://docs.aws.amazon.com/AmazonS3/latest/API/RESTObjectDELETE.html#ExampleVersionObjectDelete)
+// . You can delete objects by explicitly calling DELETE Object or configure its
+// lifecycle ( PutBucketLifecycle (https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutBucketLifecycle.html)
+// ) to enable Amazon S3 to remove them for you. If you want to block users or
 // accounts from removing or deleting objects from your bucket, you must deny them
-// the s3:DeleteObject, s3:DeleteObjectVersion, and s3:PutLifeCycleConfiguration
-// actions. The following action is related to DeleteObject:
-//
-// * PutObject
-// (https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutObject.html)
+// the s3:DeleteObject , s3:DeleteObjectVersion , and s3:PutLifeCycleConfiguration
+// actions. The following action is related to DeleteObject :
+//   - PutObject (https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutObject.html)
 func (c *Client) DeleteObject(ctx context.Context, params *DeleteObjectInput, optFns ...func(*Options)) (*DeleteObjectOutput, error) {
 	if params == nil {
 		params = &DeleteObjectInput{}
@@ -53,23 +48,21 @@ func (c *Client) DeleteObject(ctx context.Context, params *DeleteObjectInput, op
 
 type DeleteObjectInput struct {
 
-	// The bucket name of the bucket containing the object. When using this action with
-	// an access point, you must direct requests to the access point hostname. The
+	// The bucket name of the bucket containing the object. When using this action
+	// with an access point, you must direct requests to the access point hostname. The
 	// access point hostname takes the form
 	// AccessPointName-AccountId.s3-accesspoint.Region.amazonaws.com. When using this
-	// action with an access point through the AWS SDKs, you provide the access point
-	// ARN in place of the bucket name. For more information about access point ARNs,
-	// see Using access points
-	// (https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-access-points.html)
-	// in the Amazon S3 User Guide. When using this action with Amazon S3 on Outposts,
-	// you must direct requests to the S3 on Outposts hostname. The S3 on Outposts
-	// hostname takes the form
-	// AccessPointName-AccountId.outpostID.s3-outposts.Region.amazonaws.com. When using
-	// this action using S3 on Outposts through the AWS SDKs, you provide the Outposts
-	// bucket ARN in place of the bucket name. For more information about S3 on
-	// Outposts ARNs, see Using S3 on Outposts
-	// (https://docs.aws.amazon.com/AmazonS3/latest/userguide/S3onOutposts.html) in the
-	// Amazon S3 User Guide.
+	// action with an access point through the Amazon Web Services SDKs, you provide
+	// the access point ARN in place of the bucket name. For more information about
+	// access point ARNs, see Using access points (https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-access-points.html)
+	// in the Amazon S3 User Guide. When you use this action with Amazon S3 on
+	// Outposts, you must direct requests to the S3 on Outposts hostname. The S3 on
+	// Outposts hostname takes the form
+	// AccessPointName-AccountId.outpostID.s3-outposts.Region.amazonaws.com . When you
+	// use this action with S3 on Outposts through the Amazon Web Services SDKs, you
+	// provide the Outposts access point ARN in place of the bucket name. For more
+	// information about S3 on Outposts ARNs, see What is S3 on Outposts (https://docs.aws.amazon.com/AmazonS3/latest/userguide/S3onOutposts.html)
+	// in the Amazon S3 User Guide.
 	//
 	// This member is required.
 	Bucket *string
@@ -80,28 +73,32 @@ type DeleteObjectInput struct {
 	Key *string
 
 	// Indicates whether S3 Object Lock should bypass Governance-mode restrictions to
-	// process this operation.
+	// process this operation. To use this header, you must have the
+	// s3:BypassGovernanceRetention permission.
 	BypassGovernanceRetention bool
 
 	// The account ID of the expected bucket owner. If the bucket is owned by a
-	// different account, the request will fail with an HTTP 403 (Access Denied) error.
+	// different account, the request fails with the HTTP status code 403 Forbidden
+	// (access denied).
 	ExpectedBucketOwner *string
 
-	// The concatenation of the authentication device's serial number, a space, and the
-	// value that is displayed on your authentication device. Required to permanently
-	// delete a versioned object if versioning is configured with MFA delete enabled.
+	// The concatenation of the authentication device's serial number, a space, and
+	// the value that is displayed on your authentication device. Required to
+	// permanently delete a versioned object if versioning is configured with MFA
+	// delete enabled.
 	MFA *string
 
 	// Confirms that the requester knows that they will be charged for the request.
 	// Bucket owners need not specify this parameter in their requests. For information
-	// about downloading objects from requester pays buckets, see Downloading Objects
-	// in Requestor Pays Buckets
-	// (https://docs.aws.amazon.com/AmazonS3/latest/dev/ObjectsinRequesterPaysBuckets.html)
+	// about downloading objects from Requester Pays buckets, see Downloading Objects
+	// in Requester Pays Buckets (https://docs.aws.amazon.com/AmazonS3/latest/dev/ObjectsinRequesterPaysBuckets.html)
 	// in the Amazon S3 User Guide.
 	RequestPayer types.RequestPayer
 
 	// VersionId used to reference a specific version of the object.
 	VersionId *string
+
+	noSmithyDocumentSerde
 }
 
 type DeleteObjectOutput struct {
@@ -120,6 +117,8 @@ type DeleteObjectOutput struct {
 
 	// Metadata pertaining to the operation's result.
 	ResultMetadata middleware.Metadata
+
+	noSmithyDocumentSerde
 }
 
 func (c *Client) addOperationDeleteObjectMiddlewares(stack *middleware.Stack, options Options) (err error) {
@@ -167,6 +166,9 @@ func (c *Client) addOperationDeleteObjectMiddlewares(stack *middleware.Stack, op
 	if err = smithyhttp.AddCloseResponseBodyMiddleware(stack); err != nil {
 		return err
 	}
+	if err = swapWithCustomHTTPSignerMiddleware(stack, options); err != nil {
+		return err
+	}
 	if err = addOpDeleteObjectValidationMiddleware(stack); err != nil {
 		return err
 	}
@@ -174,6 +176,9 @@ func (c *Client) addOperationDeleteObjectMiddlewares(stack *middleware.Stack, op
 		return err
 	}
 	if err = addMetadataRetrieverMiddleware(stack); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addDeleteObjectUpdateEndpoint(stack, options); err != nil {
@@ -218,13 +223,44 @@ func addDeleteObjectUpdateEndpoint(stack *middleware.Stack, options Options) err
 		Accessor: s3cust.UpdateEndpointParameterAccessor{
 			GetBucketFromInput: getDeleteObjectBucketMember,
 		},
-		UsePathStyle:            options.UsePathStyle,
-		UseAccelerate:           options.UseAccelerate,
-		SupportsAccelerate:      true,
-		TargetS3ObjectLambda:    false,
-		EndpointResolver:        options.EndpointResolver,
-		EndpointResolverOptions: options.EndpointOptions,
-		UseDualstack:            options.UseDualstack,
-		UseARNRegion:            options.UseARNRegion,
+		UsePathStyle:                   options.UsePathStyle,
+		UseAccelerate:                  options.UseAccelerate,
+		SupportsAccelerate:             true,
+		TargetS3ObjectLambda:           false,
+		EndpointResolver:               options.EndpointResolver,
+		EndpointResolverOptions:        options.EndpointOptions,
+		UseARNRegion:                   options.UseARNRegion,
+		DisableMultiRegionAccessPoints: options.DisableMultiRegionAccessPoints,
 	})
+}
+
+// PresignDeleteObject is used to generate a presigned HTTP Request which contains
+// presigned URL, signed headers and HTTP method used.
+func (c *PresignClient) PresignDeleteObject(ctx context.Context, params *DeleteObjectInput, optFns ...func(*PresignOptions)) (*v4.PresignedHTTPRequest, error) {
+	if params == nil {
+		params = &DeleteObjectInput{}
+	}
+	options := c.options.copy()
+	for _, fn := range optFns {
+		fn(&options)
+	}
+	clientOptFns := append(options.ClientOptions, withNopHTTPClientAPIOption)
+
+	result, _, err := c.client.invokeOperation(ctx, "DeleteObject", params, clientOptFns,
+		c.client.addOperationDeleteObjectMiddlewares,
+		presignConverter(options).convertToPresignMiddleware,
+		addDeleteObjectPayloadAsUnsigned,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	out := result.(*v4.PresignedHTTPRequest)
+	return out, nil
+}
+
+func addDeleteObjectPayloadAsUnsigned(stack *middleware.Stack, options Options) error {
+	v4.RemoveContentSHA256HeaderMiddleware(stack)
+	v4.RemoveComputePayloadSHA256Middleware(stack)
+	return v4.AddUnsignedPayloadMiddleware(stack)
 }
