@@ -51,7 +51,7 @@ jobs:
         run: |
           # get coverage for default_branch
           echo "DEFAULT_BRANCH_COVERAGE=$(curl -s -H 'Authorization: Bearer ${{ secrets.BADGE_GIST_TOKEN }}'\
-            https://gist.githubusercontent.com/jguice/${{ secrets.BADGE_GIST_ID }}/raw/${{ github.event.repository.default_branch }}.json | jq '.message')" >> $GITHUB_ENV
+            https://gist.githubusercontent.com/dims/${{ secrets.BADGE_GIST_ID }}/raw/${{ github.event.repository.default_branch }}.json | jq '.message')" >> $GITHUB_ENV
           # NOTE parse error: Expected string key before... indicates coverage file is missing (can safely be ignored)
       - name: Check default branch merge base test coverage decline
         if: ${{ github.event.pull_request.base.ref == github.event.repository.default_branch && env.DEFAULT_BRANCH_COVERAGE }}
