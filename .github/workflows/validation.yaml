@@ -7,7 +7,7 @@ on:
       - main
   pull_request:
 env:
-  GO_VERSION_CONSTRAINT: '^1.17.2'
+  GO_VERSION_CONSTRAINT: '^1.20.4'
   GOPPROXY: direct  # match local / restricted environment by avoiding proxy
   # URL of the repository
   REPO_URL: ${{ github.event.repository.html_url }}
