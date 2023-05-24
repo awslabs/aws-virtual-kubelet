@@ -15,18 +15,18 @@ data:
   # Required Values for Virtual Kubelet
   config.json: |-
     {
-      "ManagementSubnet": "subnet-bad5ede0febe6dd",
-      "ClusterName": "aws-virtual-kubelet",
+      "ManagementSubnet": "subnet-abcd123",
+      "ClusterName": "my-eks-cluster",
       "Region": "us-west-2",
-      "AWSClientTimeoutSeconds":10
-      "AWSClientDialerTimeoutSeconds":2
+      "AWSClientTimeoutSeconds":10,
+      "AWSClientDialerTimeoutSeconds":2,
       "VMConfig": {
-        "DefaultAMI": "ami-badf005ba117ab1e5",
+        "DefaultAMI": "ami-abcd123",
         "InitData": "base64encoded"
       },
       "BootstrapAgent": {
-        "S3Bucket": "s3-bucket-name",
-        "S3Key": "vkvmagent-key-name",
+        "S3Bucket": "vk-bootstrap-agent",
+        "S3Key": "bootstrap_agent",
         "GRPCPort": 8200,
         "InitData": "base64encoded"
       },
@@ -50,12 +50,12 @@ data:
         }
       },
       "WarmPoolConfig": [{
-          "DesiredCount": "2",
+          "DesiredCount": 2,
           "IamInstanceProfile": "vk-instance-profile",
-          "SecurityGroups": ["badf005ba117ab1e5", "badf005ba117ab1e5"],
-          "KeyPair": "DoNotLogin",
-          "ImageID": "ami-bad24f0adjo97",
+          "SecurityGroups": ["sg-abc123"],
+          "KeyPair": "myEC2SSHKey",
+          "ImageID": "ami-abc123",
           "InstanceType": "m5.large",
-          "Subnets": ["subnet-0b36c1d32eb61d6cb"]
+          "Subnets": ["subnet-abc123"]
         }]
     }
