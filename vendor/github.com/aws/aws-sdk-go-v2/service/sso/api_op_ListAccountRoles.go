@@ -17,7 +17,7 @@ func (c *Client) ListAccountRoles(ctx context.Context, params *ListAccountRolesI
 		params = &ListAccountRolesInput{}
 	}
 
-	result, metadata, err := c.invokeOperation(ctx, "ListAccountRoles", params, optFns, addOperationListAccountRolesMiddlewares)
+	result, metadata, err := c.invokeOperation(ctx, "ListAccountRoles", params, optFns, c.addOperationListAccountRolesMiddlewares)
 	if err != nil {
 		return nil, err
 	}
@@ -30,9 +30,8 @@ func (c *Client) ListAccountRoles(ctx context.Context, params *ListAccountRolesI
 type ListAccountRolesInput struct {
 
 	// The token issued by the CreateToken API call. For more information, see
-	// CreateToken
-	// (https://docs.aws.amazon.com/singlesignon/latest/OIDCAPIReference/API_CreateToken.html)
-	// in the AWS SSO OIDC API Reference Guide.
+	// CreateToken (https://docs.aws.amazon.com/singlesignon/latest/OIDCAPIReference/API_CreateToken.html)
+	// in the IAM Identity Center OIDC API Reference Guide.
 	//
 	// This member is required.
 	AccessToken *string
@@ -48,6 +47,8 @@ type ListAccountRolesInput struct {
 	// The page token from the previous response output when you request subsequent
 	// pages.
 	NextToken *string
+
+	noSmithyDocumentSerde
 }
 
 type ListAccountRolesOutput struct {
@@ -61,9 +62,11 @@ type ListAccountRolesOutput struct {
 
 	// Metadata pertaining to the operation's result.
 	ResultMetadata middleware.Metadata
+
+	noSmithyDocumentSerde
 }
 
-func addOperationListAccountRolesMiddlewares(stack *middleware.Stack, options Options) (err error) {
+func (c *Client) addOperationListAccountRolesMiddlewares(stack *middleware.Stack, options Options) (err error) {
 	err = stack.Serialize.Add(&awsRestjson1_serializeOpListAccountRoles{}, middleware.After)
 	if err != nil {
 		return err
@@ -106,6 +109,9 @@ func addOperationListAccountRolesMiddlewares(stack *middleware.Stack, options Op
 		return err
 	}
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opListAccountRoles(options.Region), middleware.Before); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {
@@ -167,12 +173,13 @@ func NewListAccountRolesPaginator(client ListAccountRolesAPIClient, params *List
 		client:    client,
 		params:    params,
 		firstPage: true,
+		nextToken: params.NextToken,
 	}
 }
 
 // HasMorePages returns a boolean indicating whether more pages are available
 func (p *ListAccountRolesPaginator) HasMorePages() bool {
-	return p.firstPage || p.nextToken != nil
+	return p.firstPage || (p.nextToken != nil && len(*p.nextToken) != 0)
 }
 
 // NextPage retrieves the next ListAccountRoles page.
@@ -199,7 +206,10 @@ func (p *ListAccountRolesPaginator) NextPage(ctx context.Context, optFns ...func
 	prevToken := p.nextToken
 	p.nextToken = result.NextToken
 
-	if p.options.StopOnDuplicateToken && prevToken != nil && p.nextToken != nil && *prevToken == *p.nextToken {
+	if p.options.StopOnDuplicateToken &&
+		prevToken != nil &&
+		p.nextToken != nil &&
+		*prevToken == *p.nextToken {
 		p.nextToken = nil
 	}
 
