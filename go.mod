@@ -23,7 +23,7 @@ require (
 	k8s.io/apimachinery v0.23.0
 	k8s.io/client-go v0.23.0
 	k8s.io/klog v1.0.0
-	k8s.io/klog/v2 v2.2.0
+	k8s.io/klog/v2 v2.100.1
 	sigs.k8s.io/controller-runtime v0.7.1
 )
 
@@ -49,7 +49,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/docker/spdystream v0.0.0-20170912183627-bc6354cbbc29 // indirect
-	github.com/go-logr/logr v0.3.0 // indirect
+	github.com/go-logr/logr v1.2.0 // indirect
 	github.com/go-openapi/jsonpointer v0.19.3 // indirect
 	github.com/go-openapi/jsonreference v0.19.3 // indirect
 	github.com/go-openapi/spec v0.19.3 // indirect
