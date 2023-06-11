@@ -15,22 +15,14 @@ import (
 // you must have permissions to perform the s3:PutReplicationConfiguration action.
 // The bucket owner has these permissions by default and can grant it to others.
 // For more information about permissions, see Permissions Related to Bucket
-// Subresource Operations
-// (https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-with-s3-actions.html#using-with-s3-actions-related-to-bucket-subresources)
-// and Managing Access Permissions to Your Amazon S3 Resources
-// (https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-access-control.html).
-// It can take a while for the deletion of a replication configuration to fully
-// propagate. For information about replication configuration, see Replication
-// (https://docs.aws.amazon.com/AmazonS3/latest/dev/replication.html) in the Amazon
-// S3 User Guide. The following operations are related to
-// DeleteBucketReplication:
-//
-// * PutBucketReplication
-// (https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutBucketReplication.html)
-//
-// *
-// GetBucketReplication
-// (https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetBucketReplication.html)
+// Subresource Operations (https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-with-s3-actions.html#using-with-s3-actions-related-to-bucket-subresources)
+// and Managing Access Permissions to Your Amazon S3 Resources (https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-access-control.html)
+// . It can take a while for the deletion of a replication configuration to fully
+// propagate. For information about replication configuration, see Replication (https://docs.aws.amazon.com/AmazonS3/latest/dev/replication.html)
+// in the Amazon S3 User Guide. The following operations are related to
+// DeleteBucketReplication :
+//   - PutBucketReplication (https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutBucketReplication.html)
+//   - GetBucketReplication (https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetBucketReplication.html)
 func (c *Client) DeleteBucketReplication(ctx context.Context, params *DeleteBucketReplicationInput, optFns ...func(*Options)) (*DeleteBucketReplicationOutput, error) {
 	if params == nil {
 		params = &DeleteBucketReplicationInput{}
@@ -54,13 +46,18 @@ type DeleteBucketReplicationInput struct {
 	Bucket *string
 
 	// The account ID of the expected bucket owner. If the bucket is owned by a
-	// different account, the request will fail with an HTTP 403 (Access Denied) error.
+	// different account, the request fails with the HTTP status code 403 Forbidden
+	// (access denied).
 	ExpectedBucketOwner *string
+
+	noSmithyDocumentSerde
 }
 
 type DeleteBucketReplicationOutput struct {
 	// Metadata pertaining to the operation's result.
 	ResultMetadata middleware.Metadata
+
+	noSmithyDocumentSerde
 }
 
 func (c *Client) addOperationDeleteBucketReplicationMiddlewares(stack *middleware.Stack, options Options) (err error) {
@@ -108,6 +105,9 @@ func (c *Client) addOperationDeleteBucketReplicationMiddlewares(stack *middlewar
 	if err = smithyhttp.AddCloseResponseBodyMiddleware(stack); err != nil {
 		return err
 	}
+	if err = swapWithCustomHTTPSignerMiddleware(stack, options); err != nil {
+		return err
+	}
 	if err = addOpDeleteBucketReplicationValidationMiddleware(stack); err != nil {
 		return err
 	}
@@ -115,6 +115,9 @@ func (c *Client) addOperationDeleteBucketReplicationMiddlewares(stack *middlewar
 		return err
 	}
 	if err = addMetadataRetrieverMiddleware(stack); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addDeleteBucketReplicationUpdateEndpoint(stack, options); err != nil {
@@ -159,13 +162,13 @@ func addDeleteBucketReplicationUpdateEndpoint(stack *middleware.Stack, options O
 		Accessor: s3cust.UpdateEndpointParameterAccessor{
 			GetBucketFromInput: getDeleteBucketReplicationBucketMember,
 		},
-		UsePathStyle:            options.UsePathStyle,
-		UseAccelerate:           options.UseAccelerate,
-		SupportsAccelerate:      true,
-		TargetS3ObjectLambda:    false,
-		EndpointResolver:        options.EndpointResolver,
-		EndpointResolverOptions: options.EndpointOptions,
-		UseDualstack:            options.UseDualstack,
-		UseARNRegion:            options.UseARNRegion,
+		UsePathStyle:                   options.UsePathStyle,
+		UseAccelerate:                  options.UseAccelerate,
+		SupportsAccelerate:             true,
+		TargetS3ObjectLambda:           false,
+		EndpointResolver:               options.EndpointResolver,
+		EndpointResolverOptions:        options.EndpointOptions,
+		UseARNRegion:                   options.UseARNRegion,
+		DisableMultiRegionAccessPoints: options.DisableMultiRegionAccessPoints,
 	})
 }

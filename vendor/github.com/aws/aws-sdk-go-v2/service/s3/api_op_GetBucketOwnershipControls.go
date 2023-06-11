@@ -14,16 +14,11 @@ import (
 
 // Retrieves OwnershipControls for an Amazon S3 bucket. To use this operation, you
 // must have the s3:GetBucketOwnershipControls permission. For more information
-// about Amazon S3 permissions, see Specifying Permissions in a Policy
-// (https://docs.aws.amazon.com/AmazonS3/latest/dev/using-with-s3-actions.html).
-// For information about Amazon S3 Object Ownership, see Using Object Ownership
-// (https://docs.aws.amazon.com/AmazonS3/latest/dev/about-object-ownership.html).
-// The following operations are related to GetBucketOwnershipControls:
-//
-// *
-// PutBucketOwnershipControls
-//
-// * DeleteBucketOwnershipControls
+// about Amazon S3 permissions, see Specifying permissions in a policy (https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-with-s3-actions.html)
+// . For information about Amazon S3 Object Ownership, see Using Object Ownership (https://docs.aws.amazon.com/AmazonS3/latest/userguide/about-object-ownership.html)
+// . The following operations are related to GetBucketOwnershipControls :
+//   - PutBucketOwnershipControls
+//   - DeleteBucketOwnershipControls
 func (c *Client) GetBucketOwnershipControls(ctx context.Context, params *GetBucketOwnershipControlsInput, optFns ...func(*Options)) (*GetBucketOwnershipControlsOutput, error) {
 	if params == nil {
 		params = &GetBucketOwnershipControlsInput{}
@@ -47,18 +42,23 @@ type GetBucketOwnershipControlsInput struct {
 	Bucket *string
 
 	// The account ID of the expected bucket owner. If the bucket is owned by a
-	// different account, the request will fail with an HTTP 403 (Access Denied) error.
+	// different account, the request fails with the HTTP status code 403 Forbidden
+	// (access denied).
 	ExpectedBucketOwner *string
+
+	noSmithyDocumentSerde
 }
 
 type GetBucketOwnershipControlsOutput struct {
 
-	// The OwnershipControls (BucketOwnerPreferred or ObjectWriter) currently in effect
-	// for this Amazon S3 bucket.
+	// The OwnershipControls (BucketOwnerEnforced, BucketOwnerPreferred, or
+	// ObjectWriter) currently in effect for this Amazon S3 bucket.
 	OwnershipControls *types.OwnershipControls
 
 	// Metadata pertaining to the operation's result.
 	ResultMetadata middleware.Metadata
+
+	noSmithyDocumentSerde
 }
 
 func (c *Client) addOperationGetBucketOwnershipControlsMiddlewares(stack *middleware.Stack, options Options) (err error) {
@@ -106,6 +106,9 @@ func (c *Client) addOperationGetBucketOwnershipControlsMiddlewares(stack *middle
 	if err = smithyhttp.AddCloseResponseBodyMiddleware(stack); err != nil {
 		return err
 	}
+	if err = swapWithCustomHTTPSignerMiddleware(stack, options); err != nil {
+		return err
+	}
 	if err = addOpGetBucketOwnershipControlsValidationMiddleware(stack); err != nil {
 		return err
 	}
@@ -113,6 +116,9 @@ func (c *Client) addOperationGetBucketOwnershipControlsMiddlewares(stack *middle
 		return err
 	}
 	if err = addMetadataRetrieverMiddleware(stack); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addGetBucketOwnershipControlsUpdateEndpoint(stack, options); err != nil {
@@ -142,9 +148,9 @@ func newServiceMetadataMiddleware_opGetBucketOwnershipControls(region string) *a
 	}
 }
 
-// getGetBucketOwnershipControlsBucketMember returns a pointer to string denoting a
-// provided bucket member valueand a boolean indicating if the input has a modeled
-// bucket name,
+// getGetBucketOwnershipControlsBucketMember returns a pointer to string denoting
+// a provided bucket member valueand a boolean indicating if the input has a
+// modeled bucket name,
 func getGetBucketOwnershipControlsBucketMember(input interface{}) (*string, bool) {
 	in := input.(*GetBucketOwnershipControlsInput)
 	if in.Bucket == nil {
@@ -157,13 +163,13 @@ func addGetBucketOwnershipControlsUpdateEndpoint(stack *middleware.Stack, option
 		Accessor: s3cust.UpdateEndpointParameterAccessor{
 			GetBucketFromInput: getGetBucketOwnershipControlsBucketMember,
 		},
-		UsePathStyle:            options.UsePathStyle,
-		UseAccelerate:           options.UseAccelerate,
-		SupportsAccelerate:      true,
-		TargetS3ObjectLambda:    false,
-		EndpointResolver:        options.EndpointResolver,
-		EndpointResolverOptions: options.EndpointOptions,
-		UseDualstack:            options.UseDualstack,
-		UseARNRegion:            options.UseARNRegion,
+		UsePathStyle:                   options.UsePathStyle,
+		UseAccelerate:                  options.UseAccelerate,
+		SupportsAccelerate:             true,
+		TargetS3ObjectLambda:           false,
+		EndpointResolver:               options.EndpointResolver,
+		EndpointResolverOptions:        options.EndpointOptions,
+		UseARNRegion:                   options.UseARNRegion,
+		DisableMultiRegionAccessPoints: options.DisableMultiRegionAccessPoints,
 	})
 }

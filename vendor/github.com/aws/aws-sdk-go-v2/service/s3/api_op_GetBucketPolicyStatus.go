@@ -15,28 +15,14 @@ import (
 // Retrieves the policy status for an Amazon S3 bucket, indicating whether the
 // bucket is public. In order to use this operation, you must have the
 // s3:GetBucketPolicyStatus permission. For more information about Amazon S3
-// permissions, see Specifying Permissions in a Policy
-// (https://docs.aws.amazon.com/AmazonS3/latest/dev/using-with-s3-actions.html).
-// For more information about when Amazon S3 considers a bucket public, see The
-// Meaning of "Public"
-// (https://docs.aws.amazon.com/AmazonS3/latest/dev/access-control-block-public-access.html#access-control-block-public-access-policy-status).
-// The following operations are related to GetBucketPolicyStatus:
-//
-// * Using Amazon
-// S3 Block Public Access
-// (https://docs.aws.amazon.com/AmazonS3/latest/dev/access-control-block-public-access.html)
-//
-// *
-// GetPublicAccessBlock
-// (https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetPublicAccessBlock.html)
-//
-// *
-// PutPublicAccessBlock
-// (https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutPublicAccessBlock.html)
-//
-// *
-// DeletePublicAccessBlock
-// (https://docs.aws.amazon.com/AmazonS3/latest/API/API_DeletePublicAccessBlock.html)
+// permissions, see Specifying Permissions in a Policy (https://docs.aws.amazon.com/AmazonS3/latest/dev/using-with-s3-actions.html)
+// . For more information about when Amazon S3 considers a bucket public, see The
+// Meaning of "Public" (https://docs.aws.amazon.com/AmazonS3/latest/dev/access-control-block-public-access.html#access-control-block-public-access-policy-status)
+// . The following operations are related to GetBucketPolicyStatus :
+//   - Using Amazon S3 Block Public Access (https://docs.aws.amazon.com/AmazonS3/latest/dev/access-control-block-public-access.html)
+//   - GetPublicAccessBlock (https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetPublicAccessBlock.html)
+//   - PutPublicAccessBlock (https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutPublicAccessBlock.html)
+//   - DeletePublicAccessBlock (https://docs.aws.amazon.com/AmazonS3/latest/API/API_DeletePublicAccessBlock.html)
 func (c *Client) GetBucketPolicyStatus(ctx context.Context, params *GetBucketPolicyStatusInput, optFns ...func(*Options)) (*GetBucketPolicyStatusOutput, error) {
 	if params == nil {
 		params = &GetBucketPolicyStatusInput{}
@@ -60,8 +46,11 @@ type GetBucketPolicyStatusInput struct {
 	Bucket *string
 
 	// The account ID of the expected bucket owner. If the bucket is owned by a
-	// different account, the request will fail with an HTTP 403 (Access Denied) error.
+	// different account, the request fails with the HTTP status code 403 Forbidden
+	// (access denied).
 	ExpectedBucketOwner *string
+
+	noSmithyDocumentSerde
 }
 
 type GetBucketPolicyStatusOutput struct {
@@ -71,6 +60,8 @@ type GetBucketPolicyStatusOutput struct {
 
 	// Metadata pertaining to the operation's result.
 	ResultMetadata middleware.Metadata
+
+	noSmithyDocumentSerde
 }
 
 func (c *Client) addOperationGetBucketPolicyStatusMiddlewares(stack *middleware.Stack, options Options) (err error) {
@@ -118,6 +109,9 @@ func (c *Client) addOperationGetBucketPolicyStatusMiddlewares(stack *middleware.
 	if err = smithyhttp.AddCloseResponseBodyMiddleware(stack); err != nil {
 		return err
 	}
+	if err = swapWithCustomHTTPSignerMiddleware(stack, options); err != nil {
+		return err
+	}
 	if err = addOpGetBucketPolicyStatusValidationMiddleware(stack); err != nil {
 		return err
 	}
@@ -125,6 +119,9 @@ func (c *Client) addOperationGetBucketPolicyStatusMiddlewares(stack *middleware.
 		return err
 	}
 	if err = addMetadataRetrieverMiddleware(stack); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addGetBucketPolicyStatusUpdateEndpoint(stack, options); err != nil {
@@ -169,13 +166,13 @@ func addGetBucketPolicyStatusUpdateEndpoint(stack *middleware.Stack, options Opt
 		Accessor: s3cust.UpdateEndpointParameterAccessor{
 			GetBucketFromInput: getGetBucketPolicyStatusBucketMember,
 		},
-		UsePathStyle:            options.UsePathStyle,
-		UseAccelerate:           options.UseAccelerate,
-		SupportsAccelerate:      true,
-		TargetS3ObjectLambda:    false,
-		EndpointResolver:        options.EndpointResolver,
-		EndpointResolverOptions: options.EndpointOptions,
-		UseDualstack:            options.UseDualstack,
-		UseARNRegion:            options.UseARNRegion,
+		UsePathStyle:                   options.UsePathStyle,
+		UseAccelerate:                  options.UseAccelerate,
+		SupportsAccelerate:             true,
+		TargetS3ObjectLambda:           false,
+		EndpointResolver:               options.EndpointResolver,
+		EndpointResolverOptions:        options.EndpointOptions,
+		UseARNRegion:                   options.UseARNRegion,
+		DisableMultiRegionAccessPoints: options.DisableMultiRegionAccessPoints,
 	})
 }

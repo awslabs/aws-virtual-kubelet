@@ -6,6 +6,7 @@ import (
 	"context"
 	awsmiddleware "github.com/aws/aws-sdk-go-v2/aws/middleware"
 	"github.com/aws/aws-sdk-go-v2/aws/signer/v4"
+	internalChecksum "github.com/aws/aws-sdk-go-v2/service/internal/checksum"
 	s3cust "github.com/aws/aws-sdk-go-v2/service/s3/internal/customizations"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/aws/smithy-go/middleware"
@@ -15,16 +16,10 @@ import (
 // Sets the request payment configuration for a bucket. By default, the bucket
 // owner pays for downloads from the bucket. This configuration parameter enables
 // the bucket owner (only) to specify that the person requesting the download will
-// be charged for the download. For more information, see Requester Pays Buckets
-// (https://docs.aws.amazon.com/AmazonS3/latest/dev/RequesterPaysBuckets.html). The
-// following operations are related to PutBucketRequestPayment:
-//
-// * CreateBucket
-// (https://docs.aws.amazon.com/AmazonS3/latest/API/API_CreateBucket.html)
-//
-// *
-// GetBucketRequestPayment
-// (https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetBucketRequestPayment.html)
+// be charged for the download. For more information, see Requester Pays Buckets (https://docs.aws.amazon.com/AmazonS3/latest/dev/RequesterPaysBuckets.html)
+// . The following operations are related to PutBucketRequestPayment :
+//   - CreateBucket (https://docs.aws.amazon.com/AmazonS3/latest/API/API_CreateBucket.html)
+//   - GetBucketRequestPayment (https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetBucketRequestPayment.html)
 func (c *Client) PutBucketRequestPayment(ctx context.Context, params *PutBucketRequestPaymentInput, optFns ...func(*Options)) (*PutBucketRequestPaymentOutput, error) {
 	if params == nil {
 		params = &PutBucketRequestPaymentInput{}
@@ -52,21 +47,36 @@ type PutBucketRequestPaymentInput struct {
 	// This member is required.
 	RequestPaymentConfiguration *types.RequestPaymentConfiguration
 
-	// The base64-encoded 128-bit MD5 digest of the data. You must use this header as a
-	// message integrity check to verify that the request body was not corrupted in
-	// transit. For more information, see RFC 1864
-	// (http://www.ietf.org/rfc/rfc1864.txt). For requests made using the AWS Command
-	// Line Interface (CLI) or AWS SDKs, this field is calculated automatically.
+	// Indicates the algorithm used to create the checksum for the object when using
+	// the SDK. This header will not provide any additional functionality if not using
+	// the SDK. When sending this header, there must be a corresponding x-amz-checksum
+	// or x-amz-trailer header sent. Otherwise, Amazon S3 fails the request with the
+	// HTTP status code 400 Bad Request . For more information, see Checking object
+	// integrity (https://docs.aws.amazon.com/AmazonS3/latest/userguide/checking-object-integrity.html)
+	// in the Amazon S3 User Guide. If you provide an individual checksum, Amazon S3
+	// ignores any provided ChecksumAlgorithm parameter.
+	ChecksumAlgorithm types.ChecksumAlgorithm
+
+	// The base64-encoded 128-bit MD5 digest of the data. You must use this header as
+	// a message integrity check to verify that the request body was not corrupted in
+	// transit. For more information, see RFC 1864 (http://www.ietf.org/rfc/rfc1864.txt)
+	// . For requests made using the Amazon Web Services Command Line Interface (CLI)
+	// or Amazon Web Services SDKs, this field is calculated automatically.
 	ContentMD5 *string
 
 	// The account ID of the expected bucket owner. If the bucket is owned by a
-	// different account, the request will fail with an HTTP 403 (Access Denied) error.
+	// different account, the request fails with the HTTP status code 403 Forbidden
+	// (access denied).
 	ExpectedBucketOwner *string
+
+	noSmithyDocumentSerde
 }
 
 type PutBucketRequestPaymentOutput struct {
 	// Metadata pertaining to the operation's result.
 	ResultMetadata middleware.Metadata
+
+	noSmithyDocumentSerde
 }
 
 func (c *Client) addOperationPutBucketRequestPaymentMiddlewares(stack *middleware.Stack, options Options) (err error) {
@@ -114,6 +124,9 @@ func (c *Client) addOperationPutBucketRequestPaymentMiddlewares(stack *middlewar
 	if err = smithyhttp.AddCloseResponseBodyMiddleware(stack); err != nil {
 		return err
 	}
+	if err = swapWithCustomHTTPSignerMiddleware(stack, options); err != nil {
+		return err
+	}
 	if err = addOpPutBucketRequestPaymentValidationMiddleware(stack); err != nil {
 		return err
 	}
@@ -121,6 +134,12 @@ func (c *Client) addOperationPutBucketRequestPaymentMiddlewares(stack *middlewar
 		return err
 	}
 	if err = addMetadataRetrieverMiddleware(stack); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
+		return err
+	}
+	if err = addPutBucketRequestPaymentInputChecksumMiddlewares(stack, options); err != nil {
 		return err
 	}
 	if err = addPutBucketRequestPaymentUpdateEndpoint(stack, options); err != nil {
@@ -138,9 +157,6 @@ func (c *Client) addOperationPutBucketRequestPaymentMiddlewares(stack *middlewar
 	if err = addRequestResponseLogging(stack, options); err != nil {
 		return err
 	}
-	if err = smithyhttp.AddContentChecksumMiddleware(stack); err != nil {
-		return err
-	}
 	return nil
 }
 
@@ -151,6 +167,26 @@ func newServiceMetadataMiddleware_opPutBucketRequestPayment(region string) *awsm
 		SigningName:   "s3",
 		OperationName: "PutBucketRequestPayment",
 	}
+}
+
+// getPutBucketRequestPaymentRequestAlgorithmMember gets the request checksum
+// algorithm value provided as input.
+func getPutBucketRequestPaymentRequestAlgorithmMember(input interface{}) (string, bool) {
+	in := input.(*PutBucketRequestPaymentInput)
+	if len(in.ChecksumAlgorithm) == 0 {
+		return "", false
+	}
+	return string(in.ChecksumAlgorithm), true
+}
+
+func addPutBucketRequestPaymentInputChecksumMiddlewares(stack *middleware.Stack, options Options) error {
+	return internalChecksum.AddInputMiddleware(stack, internalChecksum.InputMiddlewareOptions{
+		GetAlgorithm:                     getPutBucketRequestPaymentRequestAlgorithmMember,
+		RequireChecksum:                  true,
+		EnableTrailingChecksum:           false,
+		EnableComputeSHA256PayloadHash:   true,
+		EnableDecodedContentLengthHeader: true,
+	})
 }
 
 // getPutBucketRequestPaymentBucketMember returns a pointer to string denoting a
@@ -168,13 +204,13 @@ func addPutBucketRequestPaymentUpdateEndpoint(stack *middleware.Stack, options O
 		Accessor: s3cust.UpdateEndpointParameterAccessor{
 			GetBucketFromInput: getPutBucketRequestPaymentBucketMember,
 		},
-		UsePathStyle:            options.UsePathStyle,
-		UseAccelerate:           options.UseAccelerate,
-		SupportsAccelerate:      true,
-		TargetS3ObjectLambda:    false,
-		EndpointResolver:        options.EndpointResolver,
-		EndpointResolverOptions: options.EndpointOptions,
-		UseDualstack:            options.UseDualstack,
-		UseARNRegion:            options.UseARNRegion,
+		UsePathStyle:                   options.UsePathStyle,
+		UseAccelerate:                  options.UseAccelerate,
+		SupportsAccelerate:             true,
+		TargetS3ObjectLambda:           false,
+		EndpointResolver:               options.EndpointResolver,
+		EndpointResolverOptions:        options.EndpointOptions,
+		UseARNRegion:                   options.UseARNRegion,
+		DisableMultiRegionAccessPoints: options.DisableMultiRegionAccessPoints,
 	})
 }

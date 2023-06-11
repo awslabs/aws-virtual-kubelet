@@ -12,29 +12,20 @@ import (
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
-// Returns the default encryption configuration for an Amazon S3 bucket. If the
-// bucket does not have a default encryption configuration, GetBucketEncryption
-// returns ServerSideEncryptionConfigurationNotFoundError. For information about
-// the Amazon S3 default encryption feature, see Amazon S3 Default Bucket
-// Encryption
-// (https://docs.aws.amazon.com/AmazonS3/latest/dev/bucket-encryption.html). To use
-// this operation, you must have permission to perform the
-// s3:GetEncryptionConfiguration action. The bucket owner has this permission by
-// default. The bucket owner can grant this permission to others. For more
-// information about permissions, see Permissions Related to Bucket Subresource
-// Operations
-// (https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-with-s3-actions.html#using-with-s3-actions-related-to-bucket-subresources)
-// and Managing Access Permissions to Your Amazon S3 Resources
-// (https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-access-control.html).
-// The following operations are related to GetBucketEncryption:
-//
-// *
-// PutBucketEncryption
-// (https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutBucketEncryption.html)
-//
-// *
-// DeleteBucketEncryption
-// (https://docs.aws.amazon.com/AmazonS3/latest/API/API_DeleteBucketEncryption.html)
+// Returns the default encryption configuration for an Amazon S3 bucket. By
+// default, all buckets have a default encryption configuration that uses
+// server-side encryption with Amazon S3 managed keys (SSE-S3). For information
+// about the bucket default encryption feature, see Amazon S3 Bucket Default
+// Encryption (https://docs.aws.amazon.com/AmazonS3/latest/dev/bucket-encryption.html)
+// in the Amazon S3 User Guide. To use this operation, you must have permission to
+// perform the s3:GetEncryptionConfiguration action. The bucket owner has this
+// permission by default. The bucket owner can grant this permission to others. For
+// more information about permissions, see Permissions Related to Bucket
+// Subresource Operations (https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-with-s3-actions.html#using-with-s3-actions-related-to-bucket-subresources)
+// and Managing Access Permissions to Your Amazon S3 Resources (https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-access-control.html)
+// . The following operations are related to GetBucketEncryption :
+//   - PutBucketEncryption (https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutBucketEncryption.html)
+//   - DeleteBucketEncryption (https://docs.aws.amazon.com/AmazonS3/latest/API/API_DeleteBucketEncryption.html)
 func (c *Client) GetBucketEncryption(ctx context.Context, params *GetBucketEncryptionInput, optFns ...func(*Options)) (*GetBucketEncryptionOutput, error) {
 	if params == nil {
 		params = &GetBucketEncryptionInput{}
@@ -59,8 +50,11 @@ type GetBucketEncryptionInput struct {
 	Bucket *string
 
 	// The account ID of the expected bucket owner. If the bucket is owned by a
-	// different account, the request will fail with an HTTP 403 (Access Denied) error.
+	// different account, the request fails with the HTTP status code 403 Forbidden
+	// (access denied).
 	ExpectedBucketOwner *string
+
+	noSmithyDocumentSerde
 }
 
 type GetBucketEncryptionOutput struct {
@@ -70,6 +64,8 @@ type GetBucketEncryptionOutput struct {
 
 	// Metadata pertaining to the operation's result.
 	ResultMetadata middleware.Metadata
+
+	noSmithyDocumentSerde
 }
 
 func (c *Client) addOperationGetBucketEncryptionMiddlewares(stack *middleware.Stack, options Options) (err error) {
@@ -117,6 +113,9 @@ func (c *Client) addOperationGetBucketEncryptionMiddlewares(stack *middleware.St
 	if err = smithyhttp.AddCloseResponseBodyMiddleware(stack); err != nil {
 		return err
 	}
+	if err = swapWithCustomHTTPSignerMiddleware(stack, options); err != nil {
+		return err
+	}
 	if err = addOpGetBucketEncryptionValidationMiddleware(stack); err != nil {
 		return err
 	}
@@ -124,6 +123,9 @@ func (c *Client) addOperationGetBucketEncryptionMiddlewares(stack *middleware.St
 		return err
 	}
 	if err = addMetadataRetrieverMiddleware(stack); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addGetBucketEncryptionUpdateEndpoint(stack, options); err != nil {
@@ -168,13 +170,13 @@ func addGetBucketEncryptionUpdateEndpoint(stack *middleware.Stack, options Optio
 		Accessor: s3cust.UpdateEndpointParameterAccessor{
 			GetBucketFromInput: getGetBucketEncryptionBucketMember,
 		},
-		UsePathStyle:            options.UsePathStyle,
-		UseAccelerate:           options.UseAccelerate,
-		SupportsAccelerate:      true,
-		TargetS3ObjectLambda:    false,
-		EndpointResolver:        options.EndpointResolver,
-		EndpointResolverOptions: options.EndpointOptions,
-		UseDualstack:            options.UseDualstack,
-		UseARNRegion:            options.UseARNRegion,
+		UsePathStyle:                   options.UsePathStyle,
+		UseAccelerate:                  options.UseAccelerate,
+		SupportsAccelerate:             true,
+		TargetS3ObjectLambda:           false,
+		EndpointResolver:               options.EndpointResolver,
+		EndpointResolverOptions:        options.EndpointOptions,
+		UseARNRegion:                   options.UseARNRegion,
+		DisableMultiRegionAccessPoints: options.DisableMultiRegionAccessPoints,
 	})
 }

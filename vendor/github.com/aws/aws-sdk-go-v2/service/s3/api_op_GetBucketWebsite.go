@@ -14,20 +14,14 @@ import (
 
 // Returns the website configuration for a bucket. To host website on Amazon S3,
 // you can configure a bucket as website by adding a website configuration. For
-// more information about hosting websites, see Hosting Websites on Amazon S3
-// (https://docs.aws.amazon.com/AmazonS3/latest/dev/WebsiteHosting.html). This GET
-// action requires the S3:GetBucketWebsite permission. By default, only the bucket
-// owner can read the bucket website configuration. However, bucket owners can
-// allow other users to read the website configuration by writing a bucket policy
-// granting them the S3:GetBucketWebsite permission. The following operations are
-// related to DeleteBucketWebsite:
-//
-// * DeleteBucketWebsite
-// (https://docs.aws.amazon.com/AmazonS3/latest/API/API_DeleteBucketWebsite.html)
-//
-// *
-// PutBucketWebsite
-// (https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutBucketWebsite.html)
+// more information about hosting websites, see Hosting Websites on Amazon S3 (https://docs.aws.amazon.com/AmazonS3/latest/dev/WebsiteHosting.html)
+// . This GET action requires the S3:GetBucketWebsite permission. By default, only
+// the bucket owner can read the bucket website configuration. However, bucket
+// owners can allow other users to read the website configuration by writing a
+// bucket policy granting them the S3:GetBucketWebsite permission. The following
+// operations are related to GetBucketWebsite :
+//   - DeleteBucketWebsite (https://docs.aws.amazon.com/AmazonS3/latest/API/API_DeleteBucketWebsite.html)
+//   - PutBucketWebsite (https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutBucketWebsite.html)
 func (c *Client) GetBucketWebsite(ctx context.Context, params *GetBucketWebsiteInput, optFns ...func(*Options)) (*GetBucketWebsiteOutput, error) {
 	if params == nil {
 		params = &GetBucketWebsiteInput{}
@@ -51,8 +45,11 @@ type GetBucketWebsiteInput struct {
 	Bucket *string
 
 	// The account ID of the expected bucket owner. If the bucket is owned by a
-	// different account, the request will fail with an HTTP 403 (Access Denied) error.
+	// different account, the request fails with the HTTP status code 403 Forbidden
+	// (access denied).
 	ExpectedBucketOwner *string
+
+	noSmithyDocumentSerde
 }
 
 type GetBucketWebsiteOutput struct {
@@ -60,7 +57,7 @@ type GetBucketWebsiteOutput struct {
 	// The object key name of the website error document to use for 4XX class errors.
 	ErrorDocument *types.ErrorDocument
 
-	// The name of the index document for the website (for example index.html).
+	// The name of the index document for the website (for example index.html ).
 	IndexDocument *types.IndexDocument
 
 	// Specifies the redirect behavior of all requests to a website endpoint of an
@@ -72,6 +69,8 @@ type GetBucketWebsiteOutput struct {
 
 	// Metadata pertaining to the operation's result.
 	ResultMetadata middleware.Metadata
+
+	noSmithyDocumentSerde
 }
 
 func (c *Client) addOperationGetBucketWebsiteMiddlewares(stack *middleware.Stack, options Options) (err error) {
@@ -119,6 +118,9 @@ func (c *Client) addOperationGetBucketWebsiteMiddlewares(stack *middleware.Stack
 	if err = smithyhttp.AddCloseResponseBodyMiddleware(stack); err != nil {
 		return err
 	}
+	if err = swapWithCustomHTTPSignerMiddleware(stack, options); err != nil {
+		return err
+	}
 	if err = addOpGetBucketWebsiteValidationMiddleware(stack); err != nil {
 		return err
 	}
@@ -126,6 +128,9 @@ func (c *Client) addOperationGetBucketWebsiteMiddlewares(stack *middleware.Stack
 		return err
 	}
 	if err = addMetadataRetrieverMiddleware(stack); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addGetBucketWebsiteUpdateEndpoint(stack, options); err != nil {
@@ -170,13 +175,13 @@ func addGetBucketWebsiteUpdateEndpoint(stack *middleware.Stack, options Options)
 		Accessor: s3cust.UpdateEndpointParameterAccessor{
 			GetBucketFromInput: getGetBucketWebsiteBucketMember,
 		},
-		UsePathStyle:            options.UsePathStyle,
-		UseAccelerate:           options.UseAccelerate,
-		SupportsAccelerate:      true,
-		TargetS3ObjectLambda:    false,
-		EndpointResolver:        options.EndpointResolver,
-		EndpointResolverOptions: options.EndpointOptions,
-		UseDualstack:            options.UseDualstack,
-		UseARNRegion:            options.UseARNRegion,
+		UsePathStyle:                   options.UsePathStyle,
+		UseAccelerate:                  options.UseAccelerate,
+		SupportsAccelerate:             true,
+		TargetS3ObjectLambda:           false,
+		EndpointResolver:               options.EndpointResolver,
+		EndpointResolverOptions:        options.EndpointOptions,
+		UseARNRegion:                   options.UseARNRegion,
+		DisableMultiRegionAccessPoints: options.DisableMultiRegionAccessPoints,
 	})
 }

@@ -13,15 +13,10 @@ import (
 )
 
 // Returns the logging status of a bucket and the permissions users have to view
-// and modify that status. To use GET, you must be the bucket owner. The following
-// operations are related to GetBucketLogging:
-//
-// * CreateBucket
-// (https://docs.aws.amazon.com/AmazonS3/latest/API/API_CreateBucket.html)
-//
-// *
-// PutBucketLogging
-// (https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutBucketLogging.html)
+// and modify that status. The following operations are related to GetBucketLogging
+// :
+//   - CreateBucket (https://docs.aws.amazon.com/AmazonS3/latest/API/API_CreateBucket.html)
+//   - PutBucketLogging (https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutBucketLogging.html)
 func (c *Client) GetBucketLogging(ctx context.Context, params *GetBucketLoggingInput, optFns ...func(*Options)) (*GetBucketLoggingOutput, error) {
 	if params == nil {
 		params = &GetBucketLoggingInput{}
@@ -45,20 +40,24 @@ type GetBucketLoggingInput struct {
 	Bucket *string
 
 	// The account ID of the expected bucket owner. If the bucket is owned by a
-	// different account, the request will fail with an HTTP 403 (Access Denied) error.
+	// different account, the request fails with the HTTP status code 403 Forbidden
+	// (access denied).
 	ExpectedBucketOwner *string
+
+	noSmithyDocumentSerde
 }
 
 type GetBucketLoggingOutput struct {
 
-	// Describes where logs are stored and the prefix that Amazon S3 assigns to all log
-	// object keys for a bucket. For more information, see PUT Bucket logging
-	// (https://docs.aws.amazon.com/AmazonS3/latest/API/RESTBucketPUTlogging.html) in
-	// the Amazon S3 API Reference.
+	// Describes where logs are stored and the prefix that Amazon S3 assigns to all
+	// log object keys for a bucket. For more information, see PUT Bucket logging (https://docs.aws.amazon.com/AmazonS3/latest/API/RESTBucketPUTlogging.html)
+	// in the Amazon S3 API Reference.
 	LoggingEnabled *types.LoggingEnabled
 
 	// Metadata pertaining to the operation's result.
 	ResultMetadata middleware.Metadata
+
+	noSmithyDocumentSerde
 }
 
 func (c *Client) addOperationGetBucketLoggingMiddlewares(stack *middleware.Stack, options Options) (err error) {
@@ -106,6 +105,9 @@ func (c *Client) addOperationGetBucketLoggingMiddlewares(stack *middleware.Stack
 	if err = smithyhttp.AddCloseResponseBodyMiddleware(stack); err != nil {
 		return err
 	}
+	if err = swapWithCustomHTTPSignerMiddleware(stack, options); err != nil {
+		return err
+	}
 	if err = addOpGetBucketLoggingValidationMiddleware(stack); err != nil {
 		return err
 	}
@@ -113,6 +115,9 @@ func (c *Client) addOperationGetBucketLoggingMiddlewares(stack *middleware.Stack
 		return err
 	}
 	if err = addMetadataRetrieverMiddleware(stack); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addGetBucketLoggingUpdateEndpoint(stack, options); err != nil {
@@ -157,13 +162,13 @@ func addGetBucketLoggingUpdateEndpoint(stack *middleware.Stack, options Options)
 		Accessor: s3cust.UpdateEndpointParameterAccessor{
 			GetBucketFromInput: getGetBucketLoggingBucketMember,
 		},
-		UsePathStyle:            options.UsePathStyle,
-		UseAccelerate:           options.UseAccelerate,
-		SupportsAccelerate:      true,
-		TargetS3ObjectLambda:    false,
-		EndpointResolver:        options.EndpointResolver,
-		EndpointResolverOptions: options.EndpointOptions,
-		UseDualstack:            options.UseDualstack,
-		UseARNRegion:            options.UseARNRegion,
+		UsePathStyle:                   options.UsePathStyle,
+		UseAccelerate:                  options.UseAccelerate,
+		SupportsAccelerate:             true,
+		TargetS3ObjectLambda:           false,
+		EndpointResolver:               options.EndpointResolver,
+		EndpointResolverOptions:        options.EndpointOptions,
+		UseARNRegion:                   options.UseARNRegion,
+		DisableMultiRegionAccessPoints: options.DisableMultiRegionAccessPoints,
 	})
 }

@@ -14,27 +14,15 @@ import (
 
 // Returns an inventory configuration (identified by the inventory configuration
 // ID) from the bucket. To use this operation, you must have permissions to perform
-// the s3:GetInventoryConfiguration action. The bucket owner has this permission by
-// default and can grant this permission to others. For more information about
-// permissions, see Permissions Related to Bucket Subresource Operations
-// (https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-with-s3-actions.html#using-with-s3-actions-related-to-bucket-subresources)
-// and Managing Access Permissions to Your Amazon S3 Resources
-// (https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-access-control.html).
-// For information about the Amazon S3 inventory feature, see Amazon S3 Inventory
-// (https://docs.aws.amazon.com/AmazonS3/latest/dev/storage-inventory.html). The
-// following operations are related to GetBucketInventoryConfiguration:
-//
-// *
-// DeleteBucketInventoryConfiguration
-// (https://docs.aws.amazon.com/AmazonS3/latest/API/API_DeleteBucketInventoryConfiguration.html)
-//
-// *
-// ListBucketInventoryConfigurations
-// (https://docs.aws.amazon.com/AmazonS3/latest/API/API_ListBucketInventoryConfigurations.html)
-//
-// *
-// PutBucketInventoryConfiguration
-// (https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutBucketInventoryConfiguration.html)
+// the s3:GetInventoryConfiguration action. The bucket owner has this permission
+// by default and can grant this permission to others. For more information about
+// permissions, see Permissions Related to Bucket Subresource Operations (https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-with-s3-actions.html#using-with-s3-actions-related-to-bucket-subresources)
+// and Managing Access Permissions to Your Amazon S3 Resources (https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-access-control.html)
+// . For information about the Amazon S3 inventory feature, see Amazon S3 Inventory (https://docs.aws.amazon.com/AmazonS3/latest/dev/storage-inventory.html)
+// . The following operations are related to GetBucketInventoryConfiguration :
+//   - DeleteBucketInventoryConfiguration (https://docs.aws.amazon.com/AmazonS3/latest/API/API_DeleteBucketInventoryConfiguration.html)
+//   - ListBucketInventoryConfigurations (https://docs.aws.amazon.com/AmazonS3/latest/API/API_ListBucketInventoryConfigurations.html)
+//   - PutBucketInventoryConfiguration (https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutBucketInventoryConfiguration.html)
 func (c *Client) GetBucketInventoryConfiguration(ctx context.Context, params *GetBucketInventoryConfigurationInput, optFns ...func(*Options)) (*GetBucketInventoryConfigurationOutput, error) {
 	if params == nil {
 		params = &GetBucketInventoryConfigurationInput{}
@@ -63,8 +51,11 @@ type GetBucketInventoryConfigurationInput struct {
 	Id *string
 
 	// The account ID of the expected bucket owner. If the bucket is owned by a
-	// different account, the request will fail with an HTTP 403 (Access Denied) error.
+	// different account, the request fails with the HTTP status code 403 Forbidden
+	// (access denied).
 	ExpectedBucketOwner *string
+
+	noSmithyDocumentSerde
 }
 
 type GetBucketInventoryConfigurationOutput struct {
@@ -74,6 +65,8 @@ type GetBucketInventoryConfigurationOutput struct {
 
 	// Metadata pertaining to the operation's result.
 	ResultMetadata middleware.Metadata
+
+	noSmithyDocumentSerde
 }
 
 func (c *Client) addOperationGetBucketInventoryConfigurationMiddlewares(stack *middleware.Stack, options Options) (err error) {
@@ -121,6 +114,9 @@ func (c *Client) addOperationGetBucketInventoryConfigurationMiddlewares(stack *m
 	if err = smithyhttp.AddCloseResponseBodyMiddleware(stack); err != nil {
 		return err
 	}
+	if err = swapWithCustomHTTPSignerMiddleware(stack, options); err != nil {
+		return err
+	}
 	if err = addOpGetBucketInventoryConfigurationValidationMiddleware(stack); err != nil {
 		return err
 	}
@@ -128,6 +124,9 @@ func (c *Client) addOperationGetBucketInventoryConfigurationMiddlewares(stack *m
 		return err
 	}
 	if err = addMetadataRetrieverMiddleware(stack); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addGetBucketInventoryConfigurationUpdateEndpoint(stack, options); err != nil {
@@ -172,13 +171,13 @@ func addGetBucketInventoryConfigurationUpdateEndpoint(stack *middleware.Stack, o
 		Accessor: s3cust.UpdateEndpointParameterAccessor{
 			GetBucketFromInput: getGetBucketInventoryConfigurationBucketMember,
 		},
-		UsePathStyle:            options.UsePathStyle,
-		UseAccelerate:           options.UseAccelerate,
-		SupportsAccelerate:      true,
-		TargetS3ObjectLambda:    false,
-		EndpointResolver:        options.EndpointResolver,
-		EndpointResolverOptions: options.EndpointOptions,
-		UseDualstack:            options.UseDualstack,
-		UseARNRegion:            options.UseARNRegion,
+		UsePathStyle:                   options.UsePathStyle,
+		UseAccelerate:                  options.UseAccelerate,
+		SupportsAccelerate:             true,
+		TargetS3ObjectLambda:           false,
+		EndpointResolver:               options.EndpointResolver,
+		EndpointResolverOptions:        options.EndpointOptions,
+		UseARNRegion:                   options.UseARNRegion,
+		DisableMultiRegionAccessPoints: options.DisableMultiRegionAccessPoints,
 	})
 }

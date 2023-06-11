@@ -13,13 +13,10 @@ import (
 )
 
 // Returns the request payment configuration of a bucket. To use this version of
-// the operation, you must be the bucket owner. For more information, see Requester
-// Pays Buckets
-// (https://docs.aws.amazon.com/AmazonS3/latest/dev/RequesterPaysBuckets.html). The
-// following operations are related to GetBucketRequestPayment:
-//
-// * ListObjects
-// (https://docs.aws.amazon.com/AmazonS3/latest/API/API_ListObjects.html)
+// the operation, you must be the bucket owner. For more information, see
+// Requester Pays Buckets (https://docs.aws.amazon.com/AmazonS3/latest/dev/RequesterPaysBuckets.html)
+// . The following operations are related to GetBucketRequestPayment :
+//   - ListObjects (https://docs.aws.amazon.com/AmazonS3/latest/API/API_ListObjects.html)
 func (c *Client) GetBucketRequestPayment(ctx context.Context, params *GetBucketRequestPaymentInput, optFns ...func(*Options)) (*GetBucketRequestPaymentOutput, error) {
 	if params == nil {
 		params = &GetBucketRequestPaymentInput{}
@@ -43,8 +40,11 @@ type GetBucketRequestPaymentInput struct {
 	Bucket *string
 
 	// The account ID of the expected bucket owner. If the bucket is owned by a
-	// different account, the request will fail with an HTTP 403 (Access Denied) error.
+	// different account, the request fails with the HTTP status code 403 Forbidden
+	// (access denied).
 	ExpectedBucketOwner *string
+
+	noSmithyDocumentSerde
 }
 
 type GetBucketRequestPaymentOutput struct {
@@ -54,6 +54,8 @@ type GetBucketRequestPaymentOutput struct {
 
 	// Metadata pertaining to the operation's result.
 	ResultMetadata middleware.Metadata
+
+	noSmithyDocumentSerde
 }
 
 func (c *Client) addOperationGetBucketRequestPaymentMiddlewares(stack *middleware.Stack, options Options) (err error) {
@@ -101,6 +103,9 @@ func (c *Client) addOperationGetBucketRequestPaymentMiddlewares(stack *middlewar
 	if err = smithyhttp.AddCloseResponseBodyMiddleware(stack); err != nil {
 		return err
 	}
+	if err = swapWithCustomHTTPSignerMiddleware(stack, options); err != nil {
+		return err
+	}
 	if err = addOpGetBucketRequestPaymentValidationMiddleware(stack); err != nil {
 		return err
 	}
@@ -108,6 +113,9 @@ func (c *Client) addOperationGetBucketRequestPaymentMiddlewares(stack *middlewar
 		return err
 	}
 	if err = addMetadataRetrieverMiddleware(stack); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addGetBucketRequestPaymentUpdateEndpoint(stack, options); err != nil {
@@ -152,13 +160,13 @@ func addGetBucketRequestPaymentUpdateEndpoint(stack *middleware.Stack, options O
 		Accessor: s3cust.UpdateEndpointParameterAccessor{
 			GetBucketFromInput: getGetBucketRequestPaymentBucketMember,
 		},
-		UsePathStyle:            options.UsePathStyle,
-		UseAccelerate:           options.UseAccelerate,
-		SupportsAccelerate:      true,
-		TargetS3ObjectLambda:    false,
-		EndpointResolver:        options.EndpointResolver,
-		EndpointResolverOptions: options.EndpointOptions,
-		UseDualstack:            options.UseDualstack,
-		UseARNRegion:            options.UseARNRegion,
+		UsePathStyle:                   options.UsePathStyle,
+		UseAccelerate:                  options.UseAccelerate,
+		SupportsAccelerate:             true,
+		TargetS3ObjectLambda:           false,
+		EndpointResolver:               options.EndpointResolver,
+		EndpointResolverOptions:        options.EndpointOptions,
+		UseARNRegion:                   options.UseARNRegion,
+		DisableMultiRegionAccessPoints: options.DisableMultiRegionAccessPoints,
 	})
 }

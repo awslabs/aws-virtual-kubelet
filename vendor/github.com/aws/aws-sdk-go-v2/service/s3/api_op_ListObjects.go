@@ -17,30 +17,14 @@ import (
 // bucket. A 200 OK response can contain valid or invalid XML. Be sure to design
 // your application to parse the contents of the response and handle it
 // appropriately. This action has been revised. We recommend that you use the newer
-// version, ListObjectsV2
-// (https://docs.aws.amazon.com/AmazonS3/latest/API/API_ListObjectsV2.html), when
-// developing applications. For backward compatibility, Amazon S3 continues to
-// support ListObjects. The following operations are related to ListObjects:
-//
-// *
-// ListObjectsV2
-// (https://docs.aws.amazon.com/AmazonS3/latest/API/API_ListObjectsV2.html)
-//
-// *
-// GetObject
-// (https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetObject.html)
-//
-// *
-// PutObject
-// (https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutObject.html)
-//
-// *
-// CreateBucket
-// (https://docs.aws.amazon.com/AmazonS3/latest/API/API_CreateBucket.html)
-//
-// *
-// ListBuckets
-// (https://docs.aws.amazon.com/AmazonS3/latest/API/API_ListBuckets.html)
+// version, ListObjectsV2 (https://docs.aws.amazon.com/AmazonS3/latest/API/API_ListObjectsV2.html)
+// , when developing applications. For backward compatibility, Amazon S3 continues
+// to support ListObjects . The following operations are related to ListObjects :
+//   - ListObjectsV2 (https://docs.aws.amazon.com/AmazonS3/latest/API/API_ListObjectsV2.html)
+//   - GetObject (https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetObject.html)
+//   - PutObject (https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutObject.html)
+//   - CreateBucket (https://docs.aws.amazon.com/AmazonS3/latest/API/API_CreateBucket.html)
+//   - ListBuckets (https://docs.aws.amazon.com/AmazonS3/latest/API/API_ListBuckets.html)
 func (c *Client) ListObjects(ctx context.Context, params *ListObjectsInput, optFns ...func(*Options)) (*ListObjectsOutput, error) {
 	if params == nil {
 		params = &ListObjectsInput{}
@@ -62,19 +46,17 @@ type ListObjectsInput struct {
 	// access point, you must direct requests to the access point hostname. The access
 	// point hostname takes the form
 	// AccessPointName-AccountId.s3-accesspoint.Region.amazonaws.com. When using this
-	// action with an access point through the AWS SDKs, you provide the access point
-	// ARN in place of the bucket name. For more information about access point ARNs,
-	// see Using access points
-	// (https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-access-points.html)
-	// in the Amazon S3 User Guide. When using this action with Amazon S3 on Outposts,
-	// you must direct requests to the S3 on Outposts hostname. The S3 on Outposts
-	// hostname takes the form
-	// AccessPointName-AccountId.outpostID.s3-outposts.Region.amazonaws.com. When using
-	// this action using S3 on Outposts through the AWS SDKs, you provide the Outposts
-	// bucket ARN in place of the bucket name. For more information about S3 on
-	// Outposts ARNs, see Using S3 on Outposts
-	// (https://docs.aws.amazon.com/AmazonS3/latest/userguide/S3onOutposts.html) in the
-	// Amazon S3 User Guide.
+	// action with an access point through the Amazon Web Services SDKs, you provide
+	// the access point ARN in place of the bucket name. For more information about
+	// access point ARNs, see Using access points (https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-access-points.html)
+	// in the Amazon S3 User Guide. When you use this action with Amazon S3 on
+	// Outposts, you must direct requests to the S3 on Outposts hostname. The S3 on
+	// Outposts hostname takes the form
+	// AccessPointName-AccountId.outpostID.s3-outposts.Region.amazonaws.com . When you
+	// use this action with S3 on Outposts through the Amazon Web Services SDKs, you
+	// provide the Outposts access point ARN in place of the bucket name. For more
+	// information about S3 on Outposts ARNs, see What is S3 on Outposts (https://docs.aws.amazon.com/AmazonS3/latest/userguide/S3onOutposts.html)
+	// in the Amazon S3 User Guide.
 	//
 	// This member is required.
 	Bucket *string
@@ -91,10 +73,12 @@ type ListObjectsInput struct {
 	EncodingType types.EncodingType
 
 	// The account ID of the expected bucket owner. If the bucket is owned by a
-	// different account, the request will fail with an HTTP 403 (Access Denied) error.
+	// different account, the request fails with the HTTP status code 403 Forbidden
+	// (access denied).
 	ExpectedBucketOwner *string
 
-	// Specifies the key to start with when listing objects in a bucket.
+	// Marker is where you want Amazon S3 to start listing from. Amazon S3 starts
+	// listing after this specified key. Marker can be any key in the bucket.
 	Marker *string
 
 	// Sets the maximum number of keys returned in the response. By default the action
@@ -109,6 +93,8 @@ type ListObjectsInput struct {
 	// objects request. Bucket owners need not specify this parameter in their
 	// requests.
 	RequestPayer types.RequestPayer
+
+	noSmithyDocumentSerde
 }
 
 type ListObjectsOutput struct {
@@ -141,8 +127,8 @@ type ListObjectsOutput struct {
 	// satisfied the search criteria.
 	IsTruncated bool
 
-	// Indicates where in the bucket listing begins. Marker is included in the response
-	// if it was sent with the request.
+	// Indicates where in the bucket listing begins. Marker is included in the
+	// response if it was sent with the request.
 	Marker *string
 
 	// The maximum number of keys returned in the response body.
@@ -165,6 +151,8 @@ type ListObjectsOutput struct {
 
 	// Metadata pertaining to the operation's result.
 	ResultMetadata middleware.Metadata
+
+	noSmithyDocumentSerde
 }
 
 func (c *Client) addOperationListObjectsMiddlewares(stack *middleware.Stack, options Options) (err error) {
@@ -212,6 +200,9 @@ func (c *Client) addOperationListObjectsMiddlewares(stack *middleware.Stack, opt
 	if err = smithyhttp.AddCloseResponseBodyMiddleware(stack); err != nil {
 		return err
 	}
+	if err = swapWithCustomHTTPSignerMiddleware(stack, options); err != nil {
+		return err
+	}
 	if err = addOpListObjectsValidationMiddleware(stack); err != nil {
 		return err
 	}
@@ -219,6 +210,9 @@ func (c *Client) addOperationListObjectsMiddlewares(stack *middleware.Stack, opt
 		return err
 	}
 	if err = addMetadataRetrieverMiddleware(stack); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addListObjectsUpdateEndpoint(stack, options); err != nil {
@@ -263,13 +257,13 @@ func addListObjectsUpdateEndpoint(stack *middleware.Stack, options Options) erro
 		Accessor: s3cust.UpdateEndpointParameterAccessor{
 			GetBucketFromInput: getListObjectsBucketMember,
 		},
-		UsePathStyle:            options.UsePathStyle,
-		UseAccelerate:           options.UseAccelerate,
-		SupportsAccelerate:      true,
-		TargetS3ObjectLambda:    false,
-		EndpointResolver:        options.EndpointResolver,
-		EndpointResolverOptions: options.EndpointOptions,
-		UseDualstack:            options.UseDualstack,
-		UseARNRegion:            options.UseARNRegion,
+		UsePathStyle:                   options.UsePathStyle,
+		UseAccelerate:                  options.UseAccelerate,
+		SupportsAccelerate:             true,
+		TargetS3ObjectLambda:           false,
+		EndpointResolver:               options.EndpointResolver,
+		EndpointResolverOptions:        options.EndpointOptions,
+		UseARNRegion:                   options.UseARNRegion,
+		DisableMultiRegionAccessPoints: options.DisableMultiRegionAccessPoints,
 	})
 }

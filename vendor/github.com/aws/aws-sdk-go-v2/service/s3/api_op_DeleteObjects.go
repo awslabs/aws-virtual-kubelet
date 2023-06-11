@@ -6,6 +6,7 @@ import (
 	"context"
 	awsmiddleware "github.com/aws/aws-sdk-go-v2/aws/middleware"
 	"github.com/aws/aws-sdk-go-v2/aws/signer/v4"
+	internalChecksum "github.com/aws/aws-sdk-go-v2/service/internal/checksum"
 	s3cust "github.com/aws/aws-sdk-go-v2/service/s3/internal/customizations"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/aws/smithy-go/middleware"
@@ -32,31 +33,16 @@ import (
 // even if there are non-versioned objects you are trying to delete. If you provide
 // an invalid token, whether there are versioned keys in the request or not, the
 // entire Multi-Object Delete request will fail. For information about MFA Delete,
-// see  MFA Delete
-// (https://docs.aws.amazon.com/AmazonS3/latest/dev/Versioning.html#MultiFactorAuthenticationDelete).
-// Finally, the Content-MD5 header is required for all Multi-Object Delete
+// see MFA Delete (https://docs.aws.amazon.com/AmazonS3/latest/dev/Versioning.html#MultiFactorAuthenticationDelete)
+// . Finally, the Content-MD5 header is required for all Multi-Object Delete
 // requests. Amazon S3 uses the header value to ensure that your request body has
 // not been altered in transit. The following operations are related to
-// DeleteObjects:
-//
-// * CreateMultipartUpload
-// (https://docs.aws.amazon.com/AmazonS3/latest/API/API_CreateMultipartUpload.html)
-//
-// *
-// UploadPart
-// (https://docs.aws.amazon.com/AmazonS3/latest/API/API_UploadPart.html)
-//
-// *
-// CompleteMultipartUpload
-// (https://docs.aws.amazon.com/AmazonS3/latest/API/API_CompleteMultipartUpload.html)
-//
-// *
-// ListParts
-// (https://docs.aws.amazon.com/AmazonS3/latest/API/API_ListParts.html)
-//
-// *
-// AbortMultipartUpload
-// (https://docs.aws.amazon.com/AmazonS3/latest/API/API_AbortMultipartUpload.html)
+// DeleteObjects :
+//   - CreateMultipartUpload (https://docs.aws.amazon.com/AmazonS3/latest/API/API_CreateMultipartUpload.html)
+//   - UploadPart (https://docs.aws.amazon.com/AmazonS3/latest/API/API_UploadPart.html)
+//   - CompleteMultipartUpload (https://docs.aws.amazon.com/AmazonS3/latest/API/API_CompleteMultipartUpload.html)
+//   - ListParts (https://docs.aws.amazon.com/AmazonS3/latest/API/API_ListParts.html)
+//   - AbortMultipartUpload (https://docs.aws.amazon.com/AmazonS3/latest/API/API_AbortMultipartUpload.html)
 func (c *Client) DeleteObjects(ctx context.Context, params *DeleteObjectsInput, optFns ...func(*Options)) (*DeleteObjectsOutput, error) {
 	if params == nil {
 		params = &DeleteObjectsInput{}
@@ -74,23 +60,21 @@ func (c *Client) DeleteObjects(ctx context.Context, params *DeleteObjectsInput, 
 
 type DeleteObjectsInput struct {
 
-	// The bucket name containing the objects to delete. When using this action with an
-	// access point, you must direct requests to the access point hostname. The access
-	// point hostname takes the form
+	// The bucket name containing the objects to delete. When using this action with
+	// an access point, you must direct requests to the access point hostname. The
+	// access point hostname takes the form
 	// AccessPointName-AccountId.s3-accesspoint.Region.amazonaws.com. When using this
-	// action with an access point through the AWS SDKs, you provide the access point
-	// ARN in place of the bucket name. For more information about access point ARNs,
-	// see Using access points
-	// (https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-access-points.html)
-	// in the Amazon S3 User Guide. When using this action with Amazon S3 on Outposts,
-	// you must direct requests to the S3 on Outposts hostname. The S3 on Outposts
-	// hostname takes the form
-	// AccessPointName-AccountId.outpostID.s3-outposts.Region.amazonaws.com. When using
-	// this action using S3 on Outposts through the AWS SDKs, you provide the Outposts
-	// bucket ARN in place of the bucket name. For more information about S3 on
-	// Outposts ARNs, see Using S3 on Outposts
-	// (https://docs.aws.amazon.com/AmazonS3/latest/userguide/S3onOutposts.html) in the
-	// Amazon S3 User Guide.
+	// action with an access point through the Amazon Web Services SDKs, you provide
+	// the access point ARN in place of the bucket name. For more information about
+	// access point ARNs, see Using access points (https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-access-points.html)
+	// in the Amazon S3 User Guide. When you use this action with Amazon S3 on
+	// Outposts, you must direct requests to the S3 on Outposts hostname. The S3 on
+	// Outposts hostname takes the form
+	// AccessPointName-AccountId.outpostID.s3-outposts.Region.amazonaws.com . When you
+	// use this action with S3 on Outposts through the Amazon Web Services SDKs, you
+	// provide the Outposts access point ARN in place of the bucket name. For more
+	// information about S3 on Outposts ARNs, see What is S3 on Outposts (https://docs.aws.amazon.com/AmazonS3/latest/userguide/S3onOutposts.html)
+	// in the Amazon S3 User Guide.
 	//
 	// This member is required.
 	Bucket *string
@@ -101,26 +85,41 @@ type DeleteObjectsInput struct {
 	Delete *types.Delete
 
 	// Specifies whether you want to delete this object even if it has a
-	// Governance-type Object Lock in place. You must have sufficient permissions to
-	// perform this operation.
+	// Governance-type Object Lock in place. To use this header, you must have the
+	// s3:BypassGovernanceRetention permission.
 	BypassGovernanceRetention bool
 
+	// Indicates the algorithm used to create the checksum for the object when using
+	// the SDK. This header will not provide any additional functionality if not using
+	// the SDK. When sending this header, there must be a corresponding x-amz-checksum
+	// or x-amz-trailer header sent. Otherwise, Amazon S3 fails the request with the
+	// HTTP status code 400 Bad Request . For more information, see Checking object
+	// integrity (https://docs.aws.amazon.com/AmazonS3/latest/userguide/checking-object-integrity.html)
+	// in the Amazon S3 User Guide. If you provide an individual checksum, Amazon S3
+	// ignores any provided ChecksumAlgorithm parameter. This checksum algorithm must
+	// be the same for all parts and it match the checksum value supplied in the
+	// CreateMultipartUpload request.
+	ChecksumAlgorithm types.ChecksumAlgorithm
+
 	// The account ID of the expected bucket owner. If the bucket is owned by a
-	// different account, the request will fail with an HTTP 403 (Access Denied) error.
+	// different account, the request fails with the HTTP status code 403 Forbidden
+	// (access denied).
 	ExpectedBucketOwner *string
 
-	// The concatenation of the authentication device's serial number, a space, and the
-	// value that is displayed on your authentication device. Required to permanently
-	// delete a versioned object if versioning is configured with MFA delete enabled.
+	// The concatenation of the authentication device's serial number, a space, and
+	// the value that is displayed on your authentication device. Required to
+	// permanently delete a versioned object if versioning is configured with MFA
+	// delete enabled.
 	MFA *string
 
 	// Confirms that the requester knows that they will be charged for the request.
 	// Bucket owners need not specify this parameter in their requests. For information
-	// about downloading objects from requester pays buckets, see Downloading Objects
-	// in Requestor Pays Buckets
-	// (https://docs.aws.amazon.com/AmazonS3/latest/dev/ObjectsinRequesterPaysBuckets.html)
+	// about downloading objects from Requester Pays buckets, see Downloading Objects
+	// in Requester Pays Buckets (https://docs.aws.amazon.com/AmazonS3/latest/dev/ObjectsinRequesterPaysBuckets.html)
 	// in the Amazon S3 User Guide.
 	RequestPayer types.RequestPayer
+
+	noSmithyDocumentSerde
 }
 
 type DeleteObjectsOutput struct {
@@ -139,6 +138,8 @@ type DeleteObjectsOutput struct {
 
 	// Metadata pertaining to the operation's result.
 	ResultMetadata middleware.Metadata
+
+	noSmithyDocumentSerde
 }
 
 func (c *Client) addOperationDeleteObjectsMiddlewares(stack *middleware.Stack, options Options) (err error) {
@@ -186,6 +187,9 @@ func (c *Client) addOperationDeleteObjectsMiddlewares(stack *middleware.Stack, o
 	if err = smithyhttp.AddCloseResponseBodyMiddleware(stack); err != nil {
 		return err
 	}
+	if err = swapWithCustomHTTPSignerMiddleware(stack, options); err != nil {
+		return err
+	}
 	if err = addOpDeleteObjectsValidationMiddleware(stack); err != nil {
 		return err
 	}
@@ -193,6 +197,12 @@ func (c *Client) addOperationDeleteObjectsMiddlewares(stack *middleware.Stack, o
 		return err
 	}
 	if err = addMetadataRetrieverMiddleware(stack); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
+		return err
+	}
+	if err = addDeleteObjectsInputChecksumMiddlewares(stack, options); err != nil {
 		return err
 	}
 	if err = addDeleteObjectsUpdateEndpoint(stack, options); err != nil {
@@ -210,9 +220,6 @@ func (c *Client) addOperationDeleteObjectsMiddlewares(stack *middleware.Stack, o
 	if err = addRequestResponseLogging(stack, options); err != nil {
 		return err
 	}
-	if err = smithyhttp.AddContentChecksumMiddleware(stack); err != nil {
-		return err
-	}
 	return nil
 }
 
@@ -223,6 +230,26 @@ func newServiceMetadataMiddleware_opDeleteObjects(region string) *awsmiddleware.
 		SigningName:   "s3",
 		OperationName: "DeleteObjects",
 	}
+}
+
+// getDeleteObjectsRequestAlgorithmMember gets the request checksum algorithm
+// value provided as input.
+func getDeleteObjectsRequestAlgorithmMember(input interface{}) (string, bool) {
+	in := input.(*DeleteObjectsInput)
+	if len(in.ChecksumAlgorithm) == 0 {
+		return "", false
+	}
+	return string(in.ChecksumAlgorithm), true
+}
+
+func addDeleteObjectsInputChecksumMiddlewares(stack *middleware.Stack, options Options) error {
+	return internalChecksum.AddInputMiddleware(stack, internalChecksum.InputMiddlewareOptions{
+		GetAlgorithm:                     getDeleteObjectsRequestAlgorithmMember,
+		RequireChecksum:                  true,
+		EnableTrailingChecksum:           false,
+		EnableComputeSHA256PayloadHash:   true,
+		EnableDecodedContentLengthHeader: true,
+	})
 }
 
 // getDeleteObjectsBucketMember returns a pointer to string denoting a provided
@@ -240,13 +267,13 @@ func addDeleteObjectsUpdateEndpoint(stack *middleware.Stack, options Options) er
 		Accessor: s3cust.UpdateEndpointParameterAccessor{
 			GetBucketFromInput: getDeleteObjectsBucketMember,
 		},
-		UsePathStyle:            options.UsePathStyle,
-		UseAccelerate:           options.UseAccelerate,
-		SupportsAccelerate:      true,
-		TargetS3ObjectLambda:    false,
-		EndpointResolver:        options.EndpointResolver,
-		EndpointResolverOptions: options.EndpointOptions,
-		UseDualstack:            options.UseDualstack,
-		UseARNRegion:            options.UseARNRegion,
+		UsePathStyle:                   options.UsePathStyle,
+		UseAccelerate:                  options.UseAccelerate,
+		SupportsAccelerate:             true,
+		TargetS3ObjectLambda:           false,
+		EndpointResolver:               options.EndpointResolver,
+		EndpointResolverOptions:        options.EndpointOptions,
+		UseARNRegion:                   options.UseARNRegion,
+		DisableMultiRegionAccessPoints: options.DisableMultiRegionAccessPoints,
 	})
 }
