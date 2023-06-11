@@ -172,21 +172,12 @@ func runRootCommandWithProviderAndClient(ctx context.Context, pInit provider.Ini
 		"watchedNamespace": c.KubeNamespace,
 	}))
 
-	var leaseClient v1.LeaseInterface
-	if c.EnableNodeLease {
-		leaseClient = client.CoordinationV1().Leases(corev1.NamespaceNodeLease)
-	}
-
 	nodeProvider, ok := p.(node.NodeProvider)
 	if !ok {
 		nodeProvider = node.NaiveNodeProvider{}
 	}
 	pNode := NodeFromProvider(ctx, c.NodeName, taint, p, c.Version)
-	nodeRunner, err := node.NewNodeController(
-		nodeProvider,
-		pNode,
-		client.CoreV1().Nodes(),
-		node.WithNodeEnableLeaseV1(leaseClient, node.DefaultLeaseDuration),
+	opts := []node.NodeControllerOpt{
 		node.WithNodeStatusUpdateErrorHandler(func(ctx context.Context, err error) error {
 			if !k8serrors.IsNotFound(err) {
 				return err
@@ -202,6 +193,18 @@ func runRootCommandWithProviderAndClient(ctx context.Context, pInit provider.Ini
 			log.G(ctx).Debug("created new node")
 			return nil
 		}),
+	}
+	var leaseClient v1.LeaseInterface
+	if c.EnableNodeLease {
+		leaseClient = client.CoordinationV1().Leases(corev1.NamespaceNodeLease)
+		opts = append(opts, node.WithNodeEnableLeaseV1(leaseClient, node.DefaultLeaseDuration))
+	}
+
+	nodeRunner, err := node.NewNodeController(
+		nodeProvider,
+		pNode,
+		client.CoreV1().Nodes(),
+		opts...,
 	)
 	if err != nil {
 		log.G(ctx).Fatal(err)
