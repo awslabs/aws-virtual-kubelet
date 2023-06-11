@@ -49,7 +49,7 @@ func installFlags(flags *pflag.FlagSet, c *opts.Opts) {
 		"kubeAPIBurst is the burst to allow while talking with kubernetes apiserver")
 
 	flags.StringVar(&c.ClientCACert, "client-verify-ca", os.Getenv("APISERVER_CA_CERT_LOCATION"), "CA cert to use to verify client requests")
-	flags.BoolVar(&c.AllowUnauthenticatedClients, "no-verify-clients", false, "Do not require client certificate validation")
+	flags.BoolVar(&c.AllowUnauthenticatedClients, "no-verify-clients", c.AllowUnauthenticatedClients, "Do not require client certificate validation")
 
 	flags.BoolVar(&c.Authentication.Webhook.Enabled, "authentication-token-webhook", c.Authentication.Webhook.Enabled, ""+
 		"Use the TokenReview API to determine authentication for bearer tokens.")
