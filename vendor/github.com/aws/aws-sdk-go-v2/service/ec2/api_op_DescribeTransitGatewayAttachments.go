@@ -34,41 +34,27 @@ type DescribeTransitGatewayAttachmentsInput struct {
 
 	// Checks whether you have the required permissions for the action, without
 	// actually making the request, and provides an error response. If you have the
-	// required permissions, the error response is DryRunOperation. Otherwise, it is
-	// UnauthorizedOperation.
+	// required permissions, the error response is DryRunOperation . Otherwise, it is
+	// UnauthorizedOperation .
 	DryRun *bool
 
 	// One or more filters. The possible values are:
-	//
-	// * association.state - The state
-	// of the association (associating | associated | disassociating).
-	//
-	// *
-	// association.transit-gateway-route-table-id - The ID of the route table for the
-	// transit gateway.
-	//
-	// * resource-id - The ID of the resource.
-	//
-	// * resource-owner-id -
-	// The ID of the Amazon Web Services account that owns the resource.
-	//
-	// *
-	// resource-type - The resource type. Valid values are vpc | vpn |
-	// direct-connect-gateway | peering | connect.
-	//
-	// * state - The state of the
-	// attachment. Valid values are available | deleted | deleting | failed | failing |
-	// initiatingRequest | modifying | pendingAcceptance | pending | rollingBack |
-	// rejected | rejecting.
-	//
-	// * transit-gateway-attachment-id - The ID of the
-	// attachment.
-	//
-	// * transit-gateway-id - The ID of the transit gateway.
-	//
-	// *
-	// transit-gateway-owner-id - The ID of the Amazon Web Services account that owns
-	// the transit gateway.
+	//   - association.state - The state of the association ( associating | associated
+	//   | disassociating ).
+	//   - association.transit-gateway-route-table-id - The ID of the route table for
+	//   the transit gateway.
+	//   - resource-id - The ID of the resource.
+	//   - resource-owner-id - The ID of the Amazon Web Services account that owns the
+	//   resource.
+	//   - resource-type - The resource type. Valid values are vpc | vpn |
+	//   direct-connect-gateway | peering | connect .
+	//   - state - The state of the attachment. Valid values are available | deleted |
+	//   deleting | failed | failing | initiatingRequest | modifying |
+	//   pendingAcceptance | pending | rollingBack | rejected | rejecting .
+	//   - transit-gateway-attachment-id - The ID of the attachment.
+	//   - transit-gateway-id - The ID of the transit gateway.
+	//   - transit-gateway-owner-id - The ID of the Amazon Web Services account that
+	//   owns the transit gateway.
 	Filters []types.Filter
 
 	// The maximum number of results to return with a single call. To retrieve the
@@ -147,6 +133,9 @@ func (c *Client) addOperationDescribeTransitGatewayAttachmentsMiddlewares(stack 
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opDescribeTransitGatewayAttachments(options.Region), middleware.Before); err != nil {
 		return err
 	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
+		return err
+	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {
 		return err
 	}
@@ -210,12 +199,13 @@ func NewDescribeTransitGatewayAttachmentsPaginator(client DescribeTransitGateway
 		client:    client,
 		params:    params,
 		firstPage: true,
+		nextToken: params.NextToken,
 	}
 }
 
 // HasMorePages returns a boolean indicating whether more pages are available
 func (p *DescribeTransitGatewayAttachmentsPaginator) HasMorePages() bool {
-	return p.firstPage || p.nextToken != nil
+	return p.firstPage || (p.nextToken != nil && len(*p.nextToken) != 0)
 }
 
 // NextPage retrieves the next DescribeTransitGatewayAttachments page.
@@ -242,7 +232,10 @@ func (p *DescribeTransitGatewayAttachmentsPaginator) NextPage(ctx context.Contex
 	prevToken := p.nextToken
 	p.nextToken = result.NextToken
 
-	if p.options.StopOnDuplicateToken && prevToken != nil && p.nextToken != nil && *prevToken == *p.nextToken {
+	if p.options.StopOnDuplicateToken &&
+		prevToken != nil &&
+		p.nextToken != nil &&
+		*prevToken == *p.nextToken {
 		p.nextToken = nil
 	}
 

@@ -5,7 +5,7 @@ go 1.20
 require (
 	github.com/aws/aws-sdk-go-v2 v1.18.0
 	github.com/aws/aws-sdk-go-v2/config v1.1.7
-	github.com/aws/aws-sdk-go-v2/service/ec2 v1.16.0
+	github.com/aws/aws-sdk-go-v2/service/ec2 v1.99.0
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.33.1
 	github.com/creasty/defaults v1.7.0
 	github.com/gogo/googleapis v1.4.1

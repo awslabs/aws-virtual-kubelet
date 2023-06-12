@@ -17,9 +17,7 @@ import (
 // the Traffic Mirror filter, all traffic related to that network service will be
 // mirrored. When you no longer want to mirror network services, use
 // RemoveNetworkServices to remove the network services from the Traffic Mirror
-// filter. For information about filter rule properties, see Network Services
-// (https://docs.aws.amazon.com/vpc/latest/mirroring/traffic-mirroring-considerations.html)
-// in the Traffic Mirroring User Guide .
+// filter.
 func (c *Client) ModifyTrafficMirrorFilterNetworkServices(ctx context.Context, params *ModifyTrafficMirrorFilterNetworkServicesInput, optFns ...func(*Options)) (*ModifyTrafficMirrorFilterNetworkServicesOutput, error) {
 	if params == nil {
 		params = &ModifyTrafficMirrorFilterNetworkServicesInput{}
@@ -47,8 +45,8 @@ type ModifyTrafficMirrorFilterNetworkServicesInput struct {
 
 	// Checks whether you have the required permissions for the action, without
 	// actually making the request, and provides an error response. If you have the
-	// required permissions, the error response is DryRunOperation. Otherwise, it is
-	// UnauthorizedOperation.
+	// required permissions, the error response is DryRunOperation . Otherwise, it is
+	// UnauthorizedOperation .
 	DryRun *bool
 
 	// The network service, for example Amazon DNS, that you no longer want to mirror.
@@ -117,6 +115,9 @@ func (c *Client) addOperationModifyTrafficMirrorFilterNetworkServicesMiddlewares
 		return err
 	}
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opModifyTrafficMirrorFilterNetworkServices(options.Region), middleware.Before); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {
