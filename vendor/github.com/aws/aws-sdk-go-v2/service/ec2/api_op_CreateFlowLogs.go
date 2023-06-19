@@ -15,16 +15,14 @@ import (
 // specific network interface, subnet, or VPC. Flow log data for a monitored
 // network interface is recorded as flow log records, which are log events
 // consisting of fields that describe the traffic flow. For more information, see
-// Flow log records
-// (https://docs.aws.amazon.com/vpc/latest/userguide/flow-logs.html#flow-log-records)
+// Flow log records (https://docs.aws.amazon.com/vpc/latest/userguide/flow-logs.html#flow-log-records)
 // in the Amazon Virtual Private Cloud User Guide. When publishing to CloudWatch
 // Logs, flow log records are published to a log group, and each network interface
 // has a unique log stream in the log group. When publishing to Amazon S3, flow log
 // records for all of the monitored network interfaces are published to a single
 // log file object that is stored in the specified bucket. For more information,
-// see VPC Flow Logs
-// (https://docs.aws.amazon.com/vpc/latest/userguide/flow-logs.html) in the Amazon
-// Virtual Private Cloud User Guide.
+// see VPC Flow Logs (https://docs.aws.amazon.com/vpc/latest/userguide/flow-logs.html)
+// in the Amazon Virtual Private Cloud User Guide.
 func (c *Client) CreateFlowLogs(ctx context.Context, params *CreateFlowLogsInput, optFns ...func(*Options)) (*CreateFlowLogsOutput, error) {
 	if params == nil {
 		params = &CreateFlowLogsInput{}
@@ -42,88 +40,90 @@ func (c *Client) CreateFlowLogs(ctx context.Context, params *CreateFlowLogsInput
 
 type CreateFlowLogsInput struct {
 
-	// The ID of the subnet, network interface, or VPC for which you want to create a
-	// flow log. Constraints: Maximum of 1000 resources
+	// The IDs of the resources to monitor. For example, if the resource type is VPC ,
+	// specify the IDs of the VPCs. Constraints: Maximum of 25 for transit gateway
+	// resource types. Maximum of 1000 for the other resource types.
 	//
 	// This member is required.
 	ResourceIds []string
 
-	// The type of resource for which to create the flow log. For example, if you
-	// specified a VPC ID for the ResourceId property, specify VPC for this property.
+	// The type of resource to monitor.
 	//
 	// This member is required.
 	ResourceType types.FlowLogsResourceType
 
-	// The type of traffic to log. You can log traffic that the resource accepts or
-	// rejects, or all traffic.
-	//
-	// This member is required.
-	TrafficType types.TrafficType
-
 	// Unique, case-sensitive identifier that you provide to ensure the idempotency of
-	// the request. For more information, see How to ensure idempotency
-	// (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/Run_Instance_Idempotency.html).
+	// the request. For more information, see How to ensure idempotency (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/Run_Instance_Idempotency.html)
+	// .
 	ClientToken *string
 
-	// The ARN for the IAM role that permits Amazon EC2 to publish flow logs to a
-	// CloudWatch Logs log group in your account. If you specify LogDestinationType as
-	// s3, do not specify DeliverLogsPermissionArn or LogGroupName.
+	// The ARN of the IAM role that allows Amazon EC2 to publish flow logs across
+	// accounts.
+	DeliverCrossAccountRole *string
+
+	// The ARN of the IAM role that allows Amazon EC2 to publish flow logs to a
+	// CloudWatch Logs log group in your account. This parameter is required if the
+	// destination type is cloud-watch-logs and unsupported otherwise.
 	DeliverLogsPermissionArn *string
+
+	// The destination options.
+	DestinationOptions *types.DestinationOptionsRequest
 
 	// Checks whether you have the required permissions for the action, without
 	// actually making the request, and provides an error response. If you have the
-	// required permissions, the error response is DryRunOperation. Otherwise, it is
-	// UnauthorizedOperation.
+	// required permissions, the error response is DryRunOperation . Otherwise, it is
+	// UnauthorizedOperation .
 	DryRun *bool
 
-	// Specifies the destination to which the flow log data is to be published. Flow
-	// log data can be published to a CloudWatch Logs log group or an Amazon S3 bucket.
-	// The value specified for this parameter depends on the value specified for
-	// LogDestinationType. If LogDestinationType is not specified or cloud-watch-logs,
-	// specify the Amazon Resource Name (ARN) of the CloudWatch Logs log group. For
-	// example, to publish to a log group called my-logs, specify
-	// arn:aws:logs:us-east-1:123456789012:log-group:my-logs. Alternatively, use
-	// LogGroupName instead. If LogDestinationType is s3, specify the ARN of the Amazon
-	// S3 bucket. You can also specify a subfolder in the bucket. To specify a
-	// subfolder in the bucket, use the following ARN format:
-	// bucket_ARN/subfolder_name/. For example, to specify a subfolder named my-logs in
-	// a bucket named my-bucket, use the following ARN:
-	// arn:aws:s3:::my-bucket/my-logs/. You cannot use AWSLogs as a subfolder name.
-	// This is a reserved term.
+	// The destination for the flow log data. The meaning of this parameter depends on
+	// the destination type.
+	//   - If the destination type is cloud-watch-logs , specify the ARN of a
+	//   CloudWatch Logs log group. For example:
+	//   arn:aws:logs:region:account_id:log-group:my_group Alternatively, use the
+	//   LogGroupName parameter.
+	//   - If the destination type is s3 , specify the ARN of an S3 bucket. For
+	//   example: arn:aws:s3:::my_bucket/my_subfolder/ The subfolder is optional. Note
+	//   that you can't use AWSLogs as a subfolder name.
+	//   - If the destination type is kinesis-data-firehose , specify the ARN of a
+	//   Kinesis Data Firehose delivery stream. For example:
+	//   arn:aws:firehose:region:account_id:deliverystream:my_stream
 	LogDestination *string
 
-	// Specifies the type of destination to which the flow log data is to be published.
-	// Flow log data can be published to CloudWatch Logs or Amazon S3. To publish flow
-	// log data to CloudWatch Logs, specify cloud-watch-logs. To publish flow log data
-	// to Amazon S3, specify s3. If you specify LogDestinationType as s3, do not
-	// specify DeliverLogsPermissionArn or LogGroupName. Default: cloud-watch-logs
+	// The type of destination for the flow log data. Default: cloud-watch-logs
 	LogDestinationType types.LogDestinationType
 
-	// The fields to include in the flow log record, in the order in which they should
-	// appear. For a list of available fields, see Flow log records
-	// (https://docs.aws.amazon.com/vpc/latest/userguide/flow-logs.html#flow-log-records).
-	// If you omit this parameter, the flow log is created using the default format. If
-	// you specify this parameter, you must specify at least one field. Specify the
-	// fields using the ${field-id} format, separated by spaces. For the CLI, use
-	// single quotation marks (' ') to surround the parameter value.
+	// The fields to include in the flow log record. List the fields in the order in
+	// which they should appear. If you omit this parameter, the flow log is created
+	// using the default format. If you specify this parameter, you must include at
+	// least one field. For more information about the available fields, see Flow log
+	// records (https://docs.aws.amazon.com/vpc/latest/userguide/flow-logs.html#flow-log-records)
+	// in the Amazon VPC User Guide or Transit Gateway Flow Log records (https://docs.aws.amazon.com/vpc/latest/tgw/tgw-flow-logs.html#flow-log-records)
+	// in the Amazon Web Services Transit Gateway Guide. Specify the fields using the
+	// ${field-id} format, separated by spaces. For the CLI, surround this parameter
+	// value with single quotes on Linux or double quotes on Windows.
 	LogFormat *string
 
 	// The name of a new or existing CloudWatch Logs log group where Amazon EC2
-	// publishes your flow logs. If you specify LogDestinationType as s3, do not
-	// specify DeliverLogsPermissionArn or LogGroupName.
+	// publishes your flow logs. This parameter is valid only if the destination type
+	// is cloud-watch-logs .
 	LogGroupName *string
 
 	// The maximum interval of time during which a flow of packets is captured and
-	// aggregated into a flow log record. You can specify 60 seconds (1 minute) or 600
-	// seconds (10 minutes). When a network interface is attached to a Nitro-based
-	// instance
-	// (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-types.html#ec2-nitro-instances),
-	// the aggregation interval is always 60 seconds or less, regardless of the value
+	// aggregated into a flow log record. The possible values are 60 seconds (1 minute)
+	// or 600 seconds (10 minutes). This parameter must be 60 seconds for transit
+	// gateway resource types. When a network interface is attached to a Nitro-based
+	// instance (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-types.html#ec2-nitro-instances)
+	// , the aggregation interval is always 60 seconds or less, regardless of the value
 	// that you specify. Default: 600
 	MaxAggregationInterval *int32
 
 	// The tags to apply to the flow logs.
 	TagSpecifications []types.TagSpecification
+
+	// The type of traffic to monitor (accepted traffic, rejected traffic, or all
+	// traffic). This parameter is not supported for transit gateway resource types. It
+	// is required for the other resource types.
+	TrafficType types.TrafficType
 
 	noSmithyDocumentSerde
 }
@@ -195,6 +195,9 @@ func (c *Client) addOperationCreateFlowLogsMiddlewares(stack *middleware.Stack, 
 		return err
 	}
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opCreateFlowLogs(options.Region), middleware.Before); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {

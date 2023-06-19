@@ -30,11 +30,6 @@ func (c *Client) DisableTransitGatewayRouteTablePropagation(ctx context.Context,
 
 type DisableTransitGatewayRouteTablePropagationInput struct {
 
-	// The ID of the attachment.
-	//
-	// This member is required.
-	TransitGatewayAttachmentId *string
-
 	// The ID of the propagation route table.
 	//
 	// This member is required.
@@ -42,9 +37,15 @@ type DisableTransitGatewayRouteTablePropagationInput struct {
 
 	// Checks whether you have the required permissions for the action, without
 	// actually making the request, and provides an error response. If you have the
-	// required permissions, the error response is DryRunOperation. Otherwise, it is
-	// UnauthorizedOperation.
+	// required permissions, the error response is DryRunOperation . Otherwise, it is
+	// UnauthorizedOperation .
 	DryRun *bool
+
+	// The ID of the attachment.
+	TransitGatewayAttachmentId *string
+
+	// The ID of the route table announcement.
+	TransitGatewayRouteTableAnnouncementId *string
 
 	noSmithyDocumentSerde
 }
@@ -109,6 +110,9 @@ func (c *Client) addOperationDisableTransitGatewayRouteTablePropagationMiddlewar
 		return err
 	}
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opDisableTransitGatewayRouteTablePropagation(options.Region), middleware.Before); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {

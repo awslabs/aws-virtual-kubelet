@@ -12,11 +12,10 @@ import (
 )
 
 // Requests a transit gateway peering attachment between the specified transit
-// gateway (requester) and a peer transit gateway (accepter). The transit gateways
-// must be in different Regions. The peer transit gateway can be in your account or
-// a different Amazon Web Services account. After you create the peering
-// attachment, the owner of the accepter transit gateway must accept the attachment
-// request.
+// gateway (requester) and a peer transit gateway (accepter). The peer transit
+// gateway can be in your account or a different Amazon Web Services account. After
+// you create the peering attachment, the owner of the accepter transit gateway
+// must accept the attachment request.
 func (c *Client) CreateTransitGatewayPeeringAttachment(ctx context.Context, params *CreateTransitGatewayPeeringAttachmentInput, optFns ...func(*Options)) (*CreateTransitGatewayPeeringAttachmentOutput, error) {
 	if params == nil {
 		params = &CreateTransitGatewayPeeringAttachmentInput{}
@@ -56,9 +55,12 @@ type CreateTransitGatewayPeeringAttachmentInput struct {
 
 	// Checks whether you have the required permissions for the action, without
 	// actually making the request, and provides an error response. If you have the
-	// required permissions, the error response is DryRunOperation. Otherwise, it is
-	// UnauthorizedOperation.
+	// required permissions, the error response is DryRunOperation . Otherwise, it is
+	// UnauthorizedOperation .
 	DryRun *bool
+
+	// Requests a transit gateway peering attachment.
+	Options *types.CreateTransitGatewayPeeringAttachmentRequestOptions
 
 	// The tags to apply to the transit gateway peering attachment.
 	TagSpecifications []types.TagSpecification
@@ -126,6 +128,9 @@ func (c *Client) addOperationCreateTransitGatewayPeeringAttachmentMiddlewares(st
 		return err
 	}
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opCreateTransitGatewayPeeringAttachment(options.Region), middleware.Before); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {

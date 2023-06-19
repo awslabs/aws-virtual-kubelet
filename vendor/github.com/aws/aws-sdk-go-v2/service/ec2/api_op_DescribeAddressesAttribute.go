@@ -13,8 +13,8 @@ import (
 )
 
 // Describes the attributes of the specified Elastic IP addresses. For
-// requirements, see Using reverse DNS for email applications
-// (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/elastic-ip-addresses-eip.html#Using_Elastic_Addressing_Reverse_DNS).
+// requirements, see Using reverse DNS for email applications (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/elastic-ip-addresses-eip.html#Using_Elastic_Addressing_Reverse_DNS)
+// .
 func (c *Client) DescribeAddressesAttribute(ctx context.Context, params *DescribeAddressesAttributeInput, optFns ...func(*Options)) (*DescribeAddressesAttributeOutput, error) {
 	if params == nil {
 		params = &DescribeAddressesAttributeInput{}
@@ -40,8 +40,8 @@ type DescribeAddressesAttributeInput struct {
 
 	// Checks whether you have the required permissions for the action, without
 	// actually making the request, and provides an error response. If you have the
-	// required permissions, the error response is DryRunOperation. Otherwise, it is
-	// UnauthorizedOperation.
+	// required permissions, the error response is DryRunOperation . Otherwise, it is
+	// UnauthorizedOperation .
 	DryRun *bool
 
 	// The maximum number of results to return with a single call. To retrieve the
@@ -117,6 +117,9 @@ func (c *Client) addOperationDescribeAddressesAttributeMiddlewares(stack *middle
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opDescribeAddressesAttribute(options.Region), middleware.Before); err != nil {
 		return err
 	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
+		return err
+	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {
 		return err
 	}
@@ -180,12 +183,13 @@ func NewDescribeAddressesAttributePaginator(client DescribeAddressesAttributeAPI
 		client:    client,
 		params:    params,
 		firstPage: true,
+		nextToken: params.NextToken,
 	}
 }
 
 // HasMorePages returns a boolean indicating whether more pages are available
 func (p *DescribeAddressesAttributePaginator) HasMorePages() bool {
-	return p.firstPage || p.nextToken != nil
+	return p.firstPage || (p.nextToken != nil && len(*p.nextToken) != 0)
 }
 
 // NextPage retrieves the next DescribeAddressesAttribute page.
@@ -212,7 +216,10 @@ func (p *DescribeAddressesAttributePaginator) NextPage(ctx context.Context, optF
 	prevToken := p.nextToken
 	p.nextToken = result.NextToken
 
-	if p.options.StopOnDuplicateToken && prevToken != nil && p.nextToken != nil && *prevToken == *p.nextToken {
+	if p.options.StopOnDuplicateToken &&
+		prevToken != nil &&
+		p.nextToken != nil &&
+		*prevToken == *p.nextToken {
 		p.nextToken = nil
 	}
 

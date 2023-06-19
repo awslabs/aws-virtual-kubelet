@@ -40,20 +40,14 @@ type DescribeClientVpnTargetNetworksInput struct {
 
 	// Checks whether you have the required permissions for the action, without
 	// actually making the request, and provides an error response. If you have the
-	// required permissions, the error response is DryRunOperation. Otherwise, it is
-	// UnauthorizedOperation.
+	// required permissions, the error response is DryRunOperation . Otherwise, it is
+	// UnauthorizedOperation .
 	DryRun *bool
 
 	// One or more filters. Filter names and values are case-sensitive.
-	//
-	// *
-	// association-id - The ID of the association.
-	//
-	// * target-network-id - The ID of the
-	// subnet specified as the target network.
-	//
-	// * vpc-id - The ID of the VPC in which
-	// the target network is located.
+	//   - association-id - The ID of the association.
+	//   - target-network-id - The ID of the subnet specified as the target network.
+	//   - vpc-id - The ID of the VPC in which the target network is located.
 	Filters []types.Filter
 
 	// The maximum number of results to return for the request in a single page. The
@@ -133,6 +127,9 @@ func (c *Client) addOperationDescribeClientVpnTargetNetworksMiddlewares(stack *m
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opDescribeClientVpnTargetNetworks(options.Region), middleware.Before); err != nil {
 		return err
 	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
+		return err
+	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {
 		return err
 	}
@@ -197,12 +194,13 @@ func NewDescribeClientVpnTargetNetworksPaginator(client DescribeClientVpnTargetN
 		client:    client,
 		params:    params,
 		firstPage: true,
+		nextToken: params.NextToken,
 	}
 }
 
 // HasMorePages returns a boolean indicating whether more pages are available
 func (p *DescribeClientVpnTargetNetworksPaginator) HasMorePages() bool {
-	return p.firstPage || p.nextToken != nil
+	return p.firstPage || (p.nextToken != nil && len(*p.nextToken) != 0)
 }
 
 // NextPage retrieves the next DescribeClientVpnTargetNetworks page.
@@ -229,7 +227,10 @@ func (p *DescribeClientVpnTargetNetworksPaginator) NextPage(ctx context.Context,
 	prevToken := p.nextToken
 	p.nextToken = result.NextToken
 
-	if p.options.StopOnDuplicateToken && prevToken != nil && p.nextToken != nil && *prevToken == *p.nextToken {
+	if p.options.StopOnDuplicateToken &&
+		prevToken != nil &&
+		p.nextToken != nil &&
+		*prevToken == *p.nextToken {
 		p.nextToken = nil
 	}
 

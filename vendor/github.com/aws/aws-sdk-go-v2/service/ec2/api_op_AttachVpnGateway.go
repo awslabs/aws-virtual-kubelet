@@ -12,9 +12,9 @@ import (
 )
 
 // Attaches a virtual private gateway to a VPC. You can attach one virtual private
-// gateway to one VPC at a time. For more information, see AWS Site-to-Site VPN
-// (https://docs.aws.amazon.com/vpn/latest/s2svpn/VPC_VPN.html) in the AWS
-// Site-to-Site VPN User Guide.
+// gateway to one VPC at a time. For more information, see Amazon Web Services
+// Site-to-Site VPN (https://docs.aws.amazon.com/vpn/latest/s2svpn/VPC_VPN.html) in
+// the Amazon Web Services Site-to-Site VPN User Guide.
 func (c *Client) AttachVpnGateway(ctx context.Context, params *AttachVpnGatewayInput, optFns ...func(*Options)) (*AttachVpnGatewayOutput, error) {
 	if params == nil {
 		params = &AttachVpnGatewayInput{}
@@ -45,8 +45,8 @@ type AttachVpnGatewayInput struct {
 
 	// Checks whether you have the required permissions for the action, without
 	// actually making the request, and provides an error response. If you have the
-	// required permissions, the error response is DryRunOperation. Otherwise, it is
-	// UnauthorizedOperation.
+	// required permissions, the error response is DryRunOperation . Otherwise, it is
+	// UnauthorizedOperation .
 	DryRun *bool
 
 	noSmithyDocumentSerde
@@ -113,6 +113,9 @@ func (c *Client) addOperationAttachVpnGatewayMiddlewares(stack *middleware.Stack
 		return err
 	}
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opAttachVpnGateway(options.Region), middleware.Before); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {
