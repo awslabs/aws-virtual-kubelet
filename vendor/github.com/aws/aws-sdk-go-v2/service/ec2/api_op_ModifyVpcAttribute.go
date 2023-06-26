@@ -50,6 +50,9 @@ type ModifyVpcAttributeInput struct {
 	// attribute.
 	EnableDnsSupport *types.AttributeBooleanValue
 
+	// Indicates whether Network Address Usage metrics are enabled for your VPC.
+	EnableNetworkAddressUsageMetrics *types.AttributeBooleanValue
+
 	noSmithyDocumentSerde
 }
 
@@ -109,6 +112,9 @@ func (c *Client) addOperationModifyVpcAttributeMiddlewares(stack *middleware.Sta
 		return err
 	}
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opModifyVpcAttribute(options.Region), middleware.Before); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {

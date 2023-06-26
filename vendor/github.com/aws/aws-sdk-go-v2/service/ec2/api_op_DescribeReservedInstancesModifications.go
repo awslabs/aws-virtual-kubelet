@@ -16,9 +16,8 @@ import (
 // specified, information about all your Reserved Instances modification requests
 // is returned. If a modification ID is specified, only information about the
 // specific modification is returned. For more information, see Modifying Reserved
-// Instances
-// (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ri-modifying.html) in the
-// Amazon EC2 User Guide.
+// Instances (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ri-modifying.html)
+// in the Amazon EC2 User Guide.
 func (c *Client) DescribeReservedInstancesModifications(ctx context.Context, params *DescribeReservedInstancesModificationsInput, optFns ...func(*Options)) (*DescribeReservedInstancesModificationsOutput, error) {
 	if params == nil {
 		params = &DescribeReservedInstancesModificationsInput{}
@@ -38,49 +37,24 @@ func (c *Client) DescribeReservedInstancesModifications(ctx context.Context, par
 type DescribeReservedInstancesModificationsInput struct {
 
 	// One or more filters.
-	//
-	// * client-token - The idempotency token for the
-	// modification request.
-	//
-	// * create-date - The time when the modification request
-	// was created.
-	//
-	// * effective-date - The time when the modification becomes
-	// effective.
-	//
-	// * modification-result.reserved-instances-id - The ID for the
-	// Reserved Instances created as part of the modification request. This ID is only
-	// available when the status of the modification is fulfilled.
-	//
-	// *
-	// modification-result.target-configuration.availability-zone - The Availability
-	// Zone for the new Reserved Instances.
-	//
-	// *
-	// modification-result.target-configuration.instance-count  - The number of new
-	// Reserved Instances.
-	//
-	// * modification-result.target-configuration.instance-type -
-	// The instance type of the new Reserved Instances.
-	//
-	// *
-	// modification-result.target-configuration.platform - The network platform of the
-	// new Reserved Instances (EC2-Classic | EC2-VPC).
-	//
-	// * reserved-instances-id - The
-	// ID of the Reserved Instances modified.
-	//
-	// * reserved-instances-modification-id -
-	// The ID of the modification request.
-	//
-	// * status - The status of the Reserved
-	// Instances modification request (processing | fulfilled | failed).
-	//
-	// *
-	// status-message - The reason for the status.
-	//
-	// * update-date - The time when the
-	// modification request was last updated.
+	//   - client-token - The idempotency token for the modification request.
+	//   - create-date - The time when the modification request was created.
+	//   - effective-date - The time when the modification becomes effective.
+	//   - modification-result.reserved-instances-id - The ID for the Reserved
+	//   Instances created as part of the modification request. This ID is only available
+	//   when the status of the modification is fulfilled .
+	//   - modification-result.target-configuration.availability-zone - The
+	//   Availability Zone for the new Reserved Instances.
+	//   - modification-result.target-configuration.instance-count - The number of new
+	//   Reserved Instances.
+	//   - modification-result.target-configuration.instance-type - The instance type
+	//   of the new Reserved Instances.
+	//   - reserved-instances-id - The ID of the Reserved Instances modified.
+	//   - reserved-instances-modification-id - The ID of the modification request.
+	//   - status - The status of the Reserved Instances modification request (
+	//   processing | fulfilled | failed ).
+	//   - status-message - The reason for the status.
+	//   - update-date - The time when the modification request was last updated.
 	Filters []types.Filter
 
 	// The token to retrieve the next page of results.
@@ -156,6 +130,9 @@ func (c *Client) addOperationDescribeReservedInstancesModificationsMiddlewares(s
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opDescribeReservedInstancesModifications(options.Region), middleware.Before); err != nil {
 		return err
 	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
+		return err
+	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {
 		return err
 	}
@@ -212,12 +189,13 @@ func NewDescribeReservedInstancesModificationsPaginator(client DescribeReservedI
 		client:    client,
 		params:    params,
 		firstPage: true,
+		nextToken: params.NextToken,
 	}
 }
 
 // HasMorePages returns a boolean indicating whether more pages are available
 func (p *DescribeReservedInstancesModificationsPaginator) HasMorePages() bool {
-	return p.firstPage || p.nextToken != nil
+	return p.firstPage || (p.nextToken != nil && len(*p.nextToken) != 0)
 }
 
 // NextPage retrieves the next DescribeReservedInstancesModifications page.
@@ -238,7 +216,10 @@ func (p *DescribeReservedInstancesModificationsPaginator) NextPage(ctx context.C
 	prevToken := p.nextToken
 	p.nextToken = result.NextToken
 
-	if p.options.StopOnDuplicateToken && prevToken != nil && p.nextToken != nil && *prevToken == *p.nextToken {
+	if p.options.StopOnDuplicateToken &&
+		prevToken != nil &&
+		p.nextToken != nil &&
+		*prevToken == *p.nextToken {
 		p.nextToken = nil
 	}
 

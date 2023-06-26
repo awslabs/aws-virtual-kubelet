@@ -47,8 +47,8 @@ type ModifyInstanceEventStartTimeInput struct {
 
 	// Checks whether you have the required permissions for the action, without
 	// actually making the request, and provides an error response. If you have the
-	// required permissions, the error response is DryRunOperation. Otherwise, it is
-	// UnauthorizedOperation.
+	// required permissions, the error response is DryRunOperation . Otherwise, it is
+	// UnauthorizedOperation .
 	DryRun *bool
 
 	noSmithyDocumentSerde
@@ -56,7 +56,7 @@ type ModifyInstanceEventStartTimeInput struct {
 
 type ModifyInstanceEventStartTimeOutput struct {
 
-	// Describes a scheduled event for an instance.
+	// Information about the event.
 	Event *types.InstanceStatusEvent
 
 	// Metadata pertaining to the operation's result.
@@ -114,6 +114,9 @@ func (c *Client) addOperationModifyInstanceEventStartTimeMiddlewares(stack *midd
 		return err
 	}
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opModifyInstanceEventStartTime(options.Region), middleware.Before); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {

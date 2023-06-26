@@ -11,28 +11,18 @@ import (
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
-// Creates a VPC endpoint service configuration to which service consumers (AWS
-// accounts, IAM users, and IAM roles) can connect. To create an endpoint service
-// configuration, you must first create one of the following for your service:
+// Creates a VPC endpoint service to which service consumers (Amazon Web Services
+// accounts, users, and IAM roles) can connect. Before you create an endpoint
+// service, you must create one of the following for your service:
+//   - A Network Load Balancer (https://docs.aws.amazon.com/elasticloadbalancing/latest/network/)
+//     . Service consumers connect to your service using an interface endpoint.
+//   - A Gateway Load Balancer (https://docs.aws.amazon.com/elasticloadbalancing/latest/gateway/)
+//     . Service consumers connect to your service using a Gateway Load Balancer
+//     endpoint.
 //
-// * A
-// Network Load Balancer
-// (https://docs.aws.amazon.com/elasticloadbalancing/latest/network/introduction.html).
-// Service consumers connect to your service using an interface endpoint.
-//
-// * A
-// Gateway Load Balancer
-// (https://docs.aws.amazon.com/elasticloadbalancing/latest/gateway/introduction.html).
-// Service consumers connect to your service using a Gateway Load Balancer
-// endpoint.
-//
-// For more information, see VPC Endpoint Services
-// (https://docs.aws.amazon.com/vpc/latest/userguide/endpoint-service.html) in the
-// Amazon Virtual Private Cloud User Guide. If you set the private DNS name, you
-// must prove that you own the private DNS domain name. For more information, see
-// VPC Endpoint Service Private DNS Name Verification
-// (https://docs.aws.amazon.com/vpc/latest/userguide/endpoint-services-dns-validation.html)
-// in the Amazon Virtual Private Cloud User Guide.
+// If you set the private DNS name, you must prove that you own the private DNS
+// domain name. For more information, see the Amazon Web Services PrivateLink Guide (https://docs.aws.amazon.com/vpc/latest/privatelink/)
+// .
 func (c *Client) CreateVpcEndpointServiceConfiguration(ctx context.Context, params *CreateVpcEndpointServiceConfigurationInput, optFns ...func(*Options)) (*CreateVpcEndpointServiceConfigurationOutput, error) {
 	if params == nil {
 		params = &CreateVpcEndpointServiceConfigurationInput{}
@@ -51,30 +41,32 @@ func (c *Client) CreateVpcEndpointServiceConfiguration(ctx context.Context, para
 type CreateVpcEndpointServiceConfigurationInput struct {
 
 	// Indicates whether requests from service consumers to create an endpoint to your
-	// service must be accepted. To accept a request, use AcceptVpcEndpointConnections.
+	// service must be accepted manually.
 	AcceptanceRequired *bool
 
 	// Unique, case-sensitive identifier that you provide to ensure the idempotency of
-	// the request. For more information, see How to Ensure Idempotency
-	// (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/Run_Instance_Idempotency.html).
+	// the request. For more information, see How to ensure idempotency (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/Run_Instance_Idempotency.html)
+	// .
 	ClientToken *string
 
 	// Checks whether you have the required permissions for the action, without
 	// actually making the request, and provides an error response. If you have the
-	// required permissions, the error response is DryRunOperation. Otherwise, it is
-	// UnauthorizedOperation.
+	// required permissions, the error response is DryRunOperation . Otherwise, it is
+	// UnauthorizedOperation .
 	DryRun *bool
 
-	// The Amazon Resource Names (ARNs) of one or more Gateway Load Balancers.
+	// The Amazon Resource Names (ARNs) of the Gateway Load Balancers.
 	GatewayLoadBalancerArns []string
 
-	// The Amazon Resource Names (ARNs) of one or more Network Load Balancers for your
-	// service.
+	// The Amazon Resource Names (ARNs) of the Network Load Balancers.
 	NetworkLoadBalancerArns []string
 
 	// (Interface endpoint configuration) The private DNS name to assign to the VPC
 	// endpoint service.
 	PrivateDnsName *string
+
+	// The supported IP address types. The possible values are ipv4 and ipv6 .
+	SupportedIpAddressTypes []string
 
 	// The tags to associate with the service.
 	TagSpecifications []types.TagSpecification
@@ -143,6 +135,9 @@ func (c *Client) addOperationCreateVpcEndpointServiceConfigurationMiddlewares(st
 		return err
 	}
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opCreateVpcEndpointServiceConfiguration(options.Region), middleware.Before); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {

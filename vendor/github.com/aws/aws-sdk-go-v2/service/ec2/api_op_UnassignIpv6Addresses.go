@@ -37,7 +37,7 @@ type UnassignIpv6AddressesInput struct {
 	// The IPv6 addresses to unassign from the network interface.
 	Ipv6Addresses []string
 
-	// One or more IPv6 prefixes to unassign from the network interface.
+	// The IPv6 prefixes to unassign from the network interface.
 	Ipv6Prefixes []string
 
 	noSmithyDocumentSerde
@@ -109,6 +109,9 @@ func (c *Client) addOperationUnassignIpv6AddressesMiddlewares(stack *middleware.
 		return err
 	}
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opUnassignIpv6Addresses(options.Region), middleware.Before); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {

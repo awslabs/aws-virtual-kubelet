@@ -6,6 +6,7 @@ import (
 	"context"
 	awsmiddleware "github.com/aws/aws-sdk-go-v2/aws/middleware"
 	"github.com/aws/aws-sdk-go-v2/aws/signer/v4"
+	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/aws/smithy-go/middleware"
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
@@ -46,9 +47,13 @@ type AttachNetworkInterfaceInput struct {
 
 	// Checks whether you have the required permissions for the action, without
 	// actually making the request, and provides an error response. If you have the
-	// required permissions, the error response is DryRunOperation. Otherwise, it is
-	// UnauthorizedOperation.
+	// required permissions, the error response is DryRunOperation . Otherwise, it is
+	// UnauthorizedOperation .
 	DryRun *bool
+
+	// Configures ENA Express for the network interface that this action attaches to
+	// the instance.
+	EnaSrdSpecification *types.EnaSrdSpecification
 
 	// The index of the network card. Some instance types support multiple network
 	// cards. The primary network interface must be assigned to network card index 0.
@@ -122,6 +127,9 @@ func (c *Client) addOperationAttachNetworkInterfaceMiddlewares(stack *middleware
 		return err
 	}
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opAttachNetworkInterface(options.Region), middleware.Before); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {

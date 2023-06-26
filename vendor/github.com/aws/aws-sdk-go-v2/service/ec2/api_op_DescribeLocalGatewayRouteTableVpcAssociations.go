@@ -33,24 +33,20 @@ type DescribeLocalGatewayRouteTableVpcAssociationsInput struct {
 
 	// Checks whether you have the required permissions for the action, without
 	// actually making the request, and provides an error response. If you have the
-	// required permissions, the error response is DryRunOperation. Otherwise, it is
-	// UnauthorizedOperation.
+	// required permissions, the error response is DryRunOperation . Otherwise, it is
+	// UnauthorizedOperation .
 	DryRun *bool
 
 	// One or more filters.
-	//
-	// * local-gateway-id - The ID of a local gateway.
-	//
-	// *
-	// local-gateway-route-table-id - The ID of the local gateway route table.
-	//
-	// *
-	// local-gateway-route-table-vpc-association-id - The ID of the association.
-	//
-	// *
-	// state - The state of the association.
-	//
-	// * vpc-id - The ID of the VPC.
+	//   - local-gateway-id - The ID of a local gateway.
+	//   - local-gateway-route-table-arn - The Amazon Resource Name (ARN) of the local
+	//   gateway route table for the association.
+	//   - local-gateway-route-table-id - The ID of the local gateway route table.
+	//   - local-gateway-route-table-vpc-association-id - The ID of the association.
+	//   - owner-id - The ID of the Amazon Web Services account that owns the local
+	//   gateway route table for the association.
+	//   - state - The state of the association.
+	//   - vpc-id - The ID of the VPC.
 	Filters []types.Filter
 
 	// The IDs of the associations.
@@ -129,6 +125,9 @@ func (c *Client) addOperationDescribeLocalGatewayRouteTableVpcAssociationsMiddle
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opDescribeLocalGatewayRouteTableVpcAssociations(options.Region), middleware.Before); err != nil {
 		return err
 	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
+		return err
+	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {
 		return err
 	}
@@ -192,12 +191,13 @@ func NewDescribeLocalGatewayRouteTableVpcAssociationsPaginator(client DescribeLo
 		client:    client,
 		params:    params,
 		firstPage: true,
+		nextToken: params.NextToken,
 	}
 }
 
 // HasMorePages returns a boolean indicating whether more pages are available
 func (p *DescribeLocalGatewayRouteTableVpcAssociationsPaginator) HasMorePages() bool {
-	return p.firstPage || p.nextToken != nil
+	return p.firstPage || (p.nextToken != nil && len(*p.nextToken) != 0)
 }
 
 // NextPage retrieves the next DescribeLocalGatewayRouteTableVpcAssociations page.
@@ -224,7 +224,10 @@ func (p *DescribeLocalGatewayRouteTableVpcAssociationsPaginator) NextPage(ctx co
 	prevToken := p.nextToken
 	p.nextToken = result.NextToken
 
-	if p.options.StopOnDuplicateToken && prevToken != nil && p.nextToken != nil && *prevToken == *p.nextToken {
+	if p.options.StopOnDuplicateToken &&
+		prevToken != nil &&
+		p.nextToken != nil &&
+		*prevToken == *p.nextToken {
 		p.nextToken = nil
 	}
 

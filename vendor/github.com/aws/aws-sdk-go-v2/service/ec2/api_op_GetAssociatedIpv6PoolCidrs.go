@@ -38,8 +38,8 @@ type GetAssociatedIpv6PoolCidrsInput struct {
 
 	// Checks whether you have the required permissions for the action, without
 	// actually making the request, and provides an error response. If you have the
-	// required permissions, the error response is DryRunOperation. Otherwise, it is
-	// UnauthorizedOperation.
+	// required permissions, the error response is DryRunOperation . Otherwise, it is
+	// UnauthorizedOperation .
 	DryRun *bool
 
 	// The maximum number of results to return with a single call. To retrieve the
@@ -118,6 +118,9 @@ func (c *Client) addOperationGetAssociatedIpv6PoolCidrsMiddlewares(stack *middle
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opGetAssociatedIpv6PoolCidrs(options.Region), middleware.Before); err != nil {
 		return err
 	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
+		return err
+	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {
 		return err
 	}
@@ -181,12 +184,13 @@ func NewGetAssociatedIpv6PoolCidrsPaginator(client GetAssociatedIpv6PoolCidrsAPI
 		client:    client,
 		params:    params,
 		firstPage: true,
+		nextToken: params.NextToken,
 	}
 }
 
 // HasMorePages returns a boolean indicating whether more pages are available
 func (p *GetAssociatedIpv6PoolCidrsPaginator) HasMorePages() bool {
-	return p.firstPage || p.nextToken != nil
+	return p.firstPage || (p.nextToken != nil && len(*p.nextToken) != 0)
 }
 
 // NextPage retrieves the next GetAssociatedIpv6PoolCidrs page.
@@ -213,7 +217,10 @@ func (p *GetAssociatedIpv6PoolCidrsPaginator) NextPage(ctx context.Context, optF
 	prevToken := p.nextToken
 	p.nextToken = result.NextToken
 
-	if p.options.StopOnDuplicateToken && prevToken != nil && p.nextToken != nil && *prevToken == *p.nextToken {
+	if p.options.StopOnDuplicateToken &&
+		prevToken != nil &&
+		p.nextToken != nil &&
+		*prevToken == *p.nextToken {
 		p.nextToken = nil
 	}
 
