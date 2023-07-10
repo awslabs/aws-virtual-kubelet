@@ -13,8 +13,8 @@ import (
 )
 
 // Describes your managed prefix lists and any Amazon Web Services-managed prefix
-// lists. To view the entries for your prefix list, use
-// GetManagedPrefixListEntries.
+// lists. To view the entries for your prefix list, use GetManagedPrefixListEntries
+// .
 func (c *Client) DescribeManagedPrefixLists(ctx context.Context, params *DescribeManagedPrefixListsInput, optFns ...func(*Options)) (*DescribeManagedPrefixListsOutput, error) {
 	if params == nil {
 		params = &DescribeManagedPrefixListsInput{}
@@ -34,19 +34,14 @@ type DescribeManagedPrefixListsInput struct {
 
 	// Checks whether you have the required permissions for the action, without
 	// actually making the request, and provides an error response. If you have the
-	// required permissions, the error response is DryRunOperation. Otherwise, it is
-	// UnauthorizedOperation.
+	// required permissions, the error response is DryRunOperation . Otherwise, it is
+	// UnauthorizedOperation .
 	DryRun *bool
 
 	// One or more filters.
-	//
-	// * owner-id - The ID of the prefix list owner.
-	//
-	// *
-	// prefix-list-id - The ID of the prefix list.
-	//
-	// * prefix-list-name - The name of
-	// the prefix list.
+	//   - owner-id - The ID of the prefix list owner.
+	//   - prefix-list-id - The ID of the prefix list.
+	//   - prefix-list-name - The name of the prefix list.
 	Filters []types.Filter
 
 	// The maximum number of results to return with a single call. To retrieve the
@@ -125,6 +120,9 @@ func (c *Client) addOperationDescribeManagedPrefixListsMiddlewares(stack *middle
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opDescribeManagedPrefixLists(options.Region), middleware.Before); err != nil {
 		return err
 	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
+		return err
+	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {
 		return err
 	}
@@ -188,12 +186,13 @@ func NewDescribeManagedPrefixListsPaginator(client DescribeManagedPrefixListsAPI
 		client:    client,
 		params:    params,
 		firstPage: true,
+		nextToken: params.NextToken,
 	}
 }
 
 // HasMorePages returns a boolean indicating whether more pages are available
 func (p *DescribeManagedPrefixListsPaginator) HasMorePages() bool {
-	return p.firstPage || p.nextToken != nil
+	return p.firstPage || (p.nextToken != nil && len(*p.nextToken) != 0)
 }
 
 // NextPage retrieves the next DescribeManagedPrefixLists page.
@@ -220,7 +219,10 @@ func (p *DescribeManagedPrefixListsPaginator) NextPage(ctx context.Context, optF
 	prevToken := p.nextToken
 	p.nextToken = result.NextToken
 
-	if p.options.StopOnDuplicateToken && prevToken != nil && p.nextToken != nil && *prevToken == *p.nextToken {
+	if p.options.StopOnDuplicateToken &&
+		prevToken != nil &&
+		p.nextToken != nil &&
+		*prevToken == *p.nextToken {
 		p.nextToken = nil
 	}
 

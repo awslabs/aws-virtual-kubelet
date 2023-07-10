@@ -12,10 +12,9 @@ import (
 )
 
 // Deletes the specified set of tags from the specified set of resources. To list
-// the current tags, use DescribeTags. For more information about tags, see Tagging
-// Your Resources
-// (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/Using_Tags.html) in the
-// Amazon Elastic Compute Cloud User Guide.
+// the current tags, use DescribeTags . For more information about tags, see Tag
+// your Amazon EC2 resources (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/Using_Tags.html)
+// in the Amazon Elastic Compute Cloud User Guide.
 func (c *Client) DeleteTags(ctx context.Context, params *DeleteTagsInput, optFns ...func(*Options)) (*DeleteTagsOutput, error) {
 	if params == nil {
 		params = &DeleteTagsInput{}
@@ -41,8 +40,8 @@ type DeleteTagsInput struct {
 
 	// Checks whether you have the required permissions for the action, without
 	// actually making the request, and provides an error response. If you have the
-	// required permissions, the error response is DryRunOperation. Otherwise, it is
-	// UnauthorizedOperation.
+	// required permissions, the error response is DryRunOperation . Otherwise, it is
+	// UnauthorizedOperation .
 	DryRun *bool
 
 	// The tags to delete. Specify a tag key and an optional tag value to delete
@@ -51,7 +50,7 @@ type DeleteTagsInput struct {
 	// string as the tag value, we delete the tag only if its value is an empty string.
 	// If you omit this parameter, we delete all user-defined tags for the specified
 	// resources. We do not delete Amazon Web Services-generated tags (tags that have
-	// the aws: prefix).
+	// the aws: prefix). Constraints: Up to 1000 tags.
 	Tags []types.Tag
 
 	noSmithyDocumentSerde
@@ -113,6 +112,9 @@ func (c *Client) addOperationDeleteTagsMiddlewares(stack *middleware.Stack, opti
 		return err
 	}
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opDeleteTags(options.Region), middleware.Before); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {
