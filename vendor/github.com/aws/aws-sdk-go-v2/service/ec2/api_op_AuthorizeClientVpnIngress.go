@@ -15,7 +15,7 @@ import (
 // Adds an ingress authorization rule to a Client VPN endpoint. Ingress
 // authorization rules act as firewall rules that grant access to networks. You
 // must configure ingress authorization rules to enable clients to access resources
-// in AWS or on-premises networks.
+// in Amazon Web Services or on-premises networks.
 func (c *Client) AuthorizeClientVpnIngress(ctx context.Context, params *AuthorizeClientVpnIngressInput, optFns ...func(*Options)) (*AuthorizeClientVpnIngressOutput, error) {
 	if params == nil {
 		params = &AuthorizeClientVpnIngressInput{}
@@ -45,8 +45,8 @@ type AuthorizeClientVpnIngressInput struct {
 	TargetNetworkCidr *string
 
 	// The ID of the group to grant access to, for example, the Active Directory group
-	// or identity provider (IdP) group. Required if AuthorizeAllGroups is false or not
-	// specified.
+	// or identity provider (IdP) group. Required if AuthorizeAllGroups is false or
+	// not specified.
 	AccessGroupId *string
 
 	// Indicates whether to grant access to all clients. Specify true to grant all
@@ -55,8 +55,8 @@ type AuthorizeClientVpnIngressInput struct {
 	AuthorizeAllGroups *bool
 
 	// Unique, case-sensitive identifier that you provide to ensure the idempotency of
-	// the request. For more information, see How to Ensure Idempotency
-	// (https://docs.aws.amazon.com/AWSEC2/latest/APIReference/Run_Instance_Idempotency.html).
+	// the request. For more information, see How to ensure idempotency (https://docs.aws.amazon.com/AWSEC2/latest/APIReference/Run_Instance_Idempotency.html)
+	// .
 	ClientToken *string
 
 	// A brief description of the authorization rule.
@@ -64,8 +64,8 @@ type AuthorizeClientVpnIngressInput struct {
 
 	// Checks whether you have the required permissions for the action, without
 	// actually making the request, and provides an error response. If you have the
-	// required permissions, the error response is DryRunOperation. Otherwise, it is
-	// UnauthorizedOperation.
+	// required permissions, the error response is DryRunOperation . Otherwise, it is
+	// UnauthorizedOperation .
 	DryRun *bool
 
 	noSmithyDocumentSerde
@@ -118,7 +118,7 @@ func (c *Client) addOperationAuthorizeClientVpnIngressMiddlewares(stack *middlew
 	if err = awsmiddleware.AddRecordResponseTiming(stack); err != nil {
 		return err
 	}
-	if err = addClientUserAgent(stack); err != nil {
+	if err = addClientUserAgent(stack, options); err != nil {
 		return err
 	}
 	if err = smithyhttp.AddErrorCloseResponseBodyMiddleware(stack); err != nil {
@@ -134,6 +134,9 @@ func (c *Client) addOperationAuthorizeClientVpnIngressMiddlewares(stack *middlew
 		return err
 	}
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opAuthorizeClientVpnIngress(options.Region), middleware.Before); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {

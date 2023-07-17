@@ -19,10 +19,9 @@ import (
 	"time"
 )
 
-// Describes the specified key pairs or all of your key pairs. For more information
-// about key pairs, see Amazon EC2 key pairs
-// (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-key-pairs.html) in the
-// Amazon Elastic Compute Cloud User Guide.
+// Describes the specified key pairs or all of your key pairs. For more
+// information about key pairs, see Amazon EC2 key pairs (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-key-pairs.html)
+// in the Amazon Elastic Compute Cloud User Guide.
 func (c *Client) DescribeKeyPairs(ctx context.Context, params *DescribeKeyPairsInput, optFns ...func(*Options)) (*DescribeKeyPairsOutput, error) {
 	if params == nil {
 		params = &DescribeKeyPairsInput{}
@@ -42,29 +41,24 @@ type DescribeKeyPairsInput struct {
 
 	// Checks whether you have the required permissions for the action, without
 	// actually making the request, and provides an error response. If you have the
-	// required permissions, the error response is DryRunOperation. Otherwise, it is
-	// UnauthorizedOperation.
+	// required permissions, the error response is DryRunOperation . Otherwise, it is
+	// UnauthorizedOperation .
 	DryRun *bool
 
 	// The filters.
-	//
-	// * key-pair-id - The ID of the key pair.
-	//
-	// * fingerprint - The
-	// fingerprint of the key pair.
-	//
-	// * key-name - The name of the key pair.
-	//
-	// * tag-key
-	// - The key of a tag assigned to the resource. Use this filter to find all
-	// resources assigned a tag with a specific key, regardless of the tag value.
-	//
-	// *
-	// tag: - The key/value combination of a tag assigned to the resource. Use the tag
-	// key in the filter name and the tag value as the filter value. For example, to
-	// find all resources that have a tag with the key Owner and the value TeamA,
-	// specify tag:Owner for the filter name and TeamA for the filter value.
+	//   - key-pair-id - The ID of the key pair.
+	//   - fingerprint - The fingerprint of the key pair.
+	//   - key-name - The name of the key pair.
+	//   - tag-key - The key of a tag assigned to the resource. Use this filter to find
+	//   all resources assigned a tag with a specific key, regardless of the tag value.
+	//   - tag : - The key/value combination of a tag assigned to the resource. Use the
+	//   tag key in the filter name and the tag value as the filter value. For example,
+	//   to find all resources that have a tag with the key Owner and the value TeamA ,
+	//   specify tag:Owner for the filter name and TeamA for the filter value.
 	Filters []types.Filter
+
+	// If true , the public key material is included in the response. Default: false
+	IncludePublicKey *bool
 
 	// The key pair names. Default: Describes all of your key pairs.
 	KeyNames []string
@@ -122,7 +116,7 @@ func (c *Client) addOperationDescribeKeyPairsMiddlewares(stack *middleware.Stack
 	if err = awsmiddleware.AddRecordResponseTiming(stack); err != nil {
 		return err
 	}
-	if err = addClientUserAgent(stack); err != nil {
+	if err = addClientUserAgent(stack, options); err != nil {
 		return err
 	}
 	if err = smithyhttp.AddErrorCloseResponseBodyMiddleware(stack); err != nil {
@@ -132,6 +126,9 @@ func (c *Client) addOperationDescribeKeyPairsMiddlewares(stack *middleware.Stack
 		return err
 	}
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opDescribeKeyPairs(options.Region), middleware.Before); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {
@@ -167,8 +164,8 @@ type KeyPairExistsWaiterOptions struct {
 	// MinDelay must resolve to a value lesser than or equal to the MaxDelay.
 	MinDelay time.Duration
 
-	// MaxDelay is the maximum amount of time to delay between retries. If unset or set
-	// to zero, KeyPairExistsWaiter will use default max delay of 120 seconds. Note
+	// MaxDelay is the maximum amount of time to delay between retries. If unset or
+	// set to zero, KeyPairExistsWaiter will use default max delay of 120 seconds. Note
 	// that MaxDelay must resolve to value greater than or equal to the MinDelay.
 	MaxDelay time.Duration
 
@@ -213,8 +210,17 @@ func NewKeyPairExistsWaiter(client DescribeKeyPairsAPIClient, optFns ...func(*Ke
 // maximum wait duration the waiter will wait. The maxWaitDur is required and must
 // be greater than zero.
 func (w *KeyPairExistsWaiter) Wait(ctx context.Context, params *DescribeKeyPairsInput, maxWaitDur time.Duration, optFns ...func(*KeyPairExistsWaiterOptions)) error {
+	_, err := w.WaitForOutput(ctx, params, maxWaitDur, optFns...)
+	return err
+}
+
+// WaitForOutput calls the waiter function for KeyPairExists waiter and returns
+// the output of the successful operation. The maxWaitDur is the maximum wait
+// duration the waiter will wait. The maxWaitDur is required and must be greater
+// than zero.
+func (w *KeyPairExistsWaiter) WaitForOutput(ctx context.Context, params *DescribeKeyPairsInput, maxWaitDur time.Duration, optFns ...func(*KeyPairExistsWaiterOptions)) (*DescribeKeyPairsOutput, error) {
 	if maxWaitDur <= 0 {
-		return fmt.Errorf("maximum wait time for waiter must be greater than zero")
+		return nil, fmt.Errorf("maximum wait time for waiter must be greater than zero")
 	}
 
 	options := w.options
@@ -227,7 +233,7 @@ func (w *KeyPairExistsWaiter) Wait(ctx context.Context, params *DescribeKeyPairs
 	}
 
 	if options.MinDelay > options.MaxDelay {
-		return fmt.Errorf("minimum waiter delay %v must be lesser than or equal to maximum waiter delay of %v.", options.MinDelay, options.MaxDelay)
+		return nil, fmt.Errorf("minimum waiter delay %v must be lesser than or equal to maximum waiter delay of %v.", options.MinDelay, options.MaxDelay)
 	}
 
 	ctx, cancelFn := context.WithTimeout(ctx, maxWaitDur)
@@ -255,10 +261,10 @@ func (w *KeyPairExistsWaiter) Wait(ctx context.Context, params *DescribeKeyPairs
 
 		retryable, err := options.Retryable(ctx, params, out, err)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if !retryable {
-			return nil
+			return out, nil
 		}
 
 		remainingTime -= time.Since(start)
@@ -271,16 +277,16 @@ func (w *KeyPairExistsWaiter) Wait(ctx context.Context, params *DescribeKeyPairs
 			attempt, options.MinDelay, options.MaxDelay, remainingTime,
 		)
 		if err != nil {
-			return fmt.Errorf("error computing waiter delay, %w", err)
+			return nil, fmt.Errorf("error computing waiter delay, %w", err)
 		}
 
 		remainingTime -= delay
 		// sleep for the delay amount before invoking a request
 		if err := smithytime.SleepWithContext(ctx, delay); err != nil {
-			return fmt.Errorf("request cancelled while waiting, %w", err)
+			return nil, fmt.Errorf("request cancelled while waiting, %w", err)
 		}
 	}
-	return fmt.Errorf("exceeded max wait time for KeyPairExists waiter")
+	return nil, fmt.Errorf("exceeded max wait time for KeyPairExists waiter")
 }
 
 func keyPairExistsStateRetryable(ctx context.Context, input *DescribeKeyPairsInput, output *DescribeKeyPairsOutput, err error) (bool, error) {

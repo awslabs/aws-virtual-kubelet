@@ -33,27 +33,19 @@ type DescribeTransitGatewayRouteTablesInput struct {
 
 	// Checks whether you have the required permissions for the action, without
 	// actually making the request, and provides an error response. If you have the
-	// required permissions, the error response is DryRunOperation. Otherwise, it is
-	// UnauthorizedOperation.
+	// required permissions, the error response is DryRunOperation . Otherwise, it is
+	// UnauthorizedOperation .
 	DryRun *bool
 
 	// One or more filters. The possible values are:
-	//
-	// * default-association-route-table
-	// - Indicates whether this is the default association route table for the transit
-	// gateway (true | false).
-	//
-	// * default-propagation-route-table - Indicates whether
-	// this is the default propagation route table for the transit gateway (true |
-	// false).
-	//
-	// * state - The state of the route table (available | deleting | deleted
-	// | pending).
-	//
-	// * transit-gateway-id - The ID of the transit gateway.
-	//
-	// *
-	// transit-gateway-route-table-id - The ID of the transit gateway route table.
+	//   - default-association-route-table - Indicates whether this is the default
+	//   association route table for the transit gateway ( true | false ).
+	//   - default-propagation-route-table - Indicates whether this is the default
+	//   propagation route table for the transit gateway ( true | false ).
+	//   - state - The state of the route table ( available | deleting | deleted |
+	//   pending ).
+	//   - transit-gateway-id - The ID of the transit gateway.
+	//   - transit-gateway-route-table-id - The ID of the transit gateway route table.
 	Filters []types.Filter
 
 	// The maximum number of results to return with a single call. To retrieve the
@@ -120,7 +112,7 @@ func (c *Client) addOperationDescribeTransitGatewayRouteTablesMiddlewares(stack 
 	if err = awsmiddleware.AddRecordResponseTiming(stack); err != nil {
 		return err
 	}
-	if err = addClientUserAgent(stack); err != nil {
+	if err = addClientUserAgent(stack, options); err != nil {
 		return err
 	}
 	if err = smithyhttp.AddErrorCloseResponseBodyMiddleware(stack); err != nil {
@@ -130,6 +122,9 @@ func (c *Client) addOperationDescribeTransitGatewayRouteTablesMiddlewares(stack 
 		return err
 	}
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opDescribeTransitGatewayRouteTables(options.Region), middleware.Before); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {
@@ -195,12 +190,13 @@ func NewDescribeTransitGatewayRouteTablesPaginator(client DescribeTransitGateway
 		client:    client,
 		params:    params,
 		firstPage: true,
+		nextToken: params.NextToken,
 	}
 }
 
 // HasMorePages returns a boolean indicating whether more pages are available
 func (p *DescribeTransitGatewayRouteTablesPaginator) HasMorePages() bool {
-	return p.firstPage || p.nextToken != nil
+	return p.firstPage || (p.nextToken != nil && len(*p.nextToken) != 0)
 }
 
 // NextPage retrieves the next DescribeTransitGatewayRouteTables page.
@@ -227,7 +223,10 @@ func (p *DescribeTransitGatewayRouteTablesPaginator) NextPage(ctx context.Contex
 	prevToken := p.nextToken
 	p.nextToken = result.NextToken
 
-	if p.options.StopOnDuplicateToken && prevToken != nil && p.nextToken != nil && *prevToken == *p.nextToken {
+	if p.options.StopOnDuplicateToken &&
+		prevToken != nil &&
+		p.nextToken != nil &&
+		*prevToken == *p.nextToken {
 		p.nextToken = nil
 	}
 
