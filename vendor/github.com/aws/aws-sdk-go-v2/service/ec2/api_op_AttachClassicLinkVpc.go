@@ -10,15 +10,15 @@ import (
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
-// Links an EC2-Classic instance to a ClassicLink-enabled VPC through one or more
-// of the VPC's security groups. You cannot link an EC2-Classic instance to more
-// than one VPC at a time. You can only link an instance that's in the running
-// state. An instance is automatically unlinked from a VPC when it's stopped - you
-// can link it to the VPC again when you restart it. After you've linked an
-// instance, you cannot change the VPC security groups that are associated with it.
-// To change the security groups, you must first unlink the instance, and then link
-// it again. Linking your instance to a VPC is sometimes referred to as attaching
-// your instance.
+// This action is deprecated. Links an EC2-Classic instance to a
+// ClassicLink-enabled VPC through one or more of the VPC security groups. You
+// cannot link an EC2-Classic instance to more than one VPC at a time. You can only
+// link an instance that's in the running state. An instance is automatically
+// unlinked from a VPC when it's stopped - you can link it to the VPC again when
+// you restart it. After you've linked an instance, you cannot change the VPC
+// security groups that are associated with it. To change the security groups, you
+// must first unlink the instance, and then link it again. Linking your instance to
+// a VPC is sometimes referred to as attaching your instance.
 func (c *Client) AttachClassicLinkVpc(ctx context.Context, params *AttachClassicLinkVpcInput, optFns ...func(*Options)) (*AttachClassicLinkVpcOutput, error) {
 	if params == nil {
 		params = &AttachClassicLinkVpcInput{}
@@ -36,26 +36,26 @@ func (c *Client) AttachClassicLinkVpc(ctx context.Context, params *AttachClassic
 
 type AttachClassicLinkVpcInput struct {
 
-	// The ID of one or more of the VPC's security groups. You cannot specify security
-	// groups from a different VPC.
+	// The IDs of the security groups. You cannot specify security groups from a
+	// different VPC.
 	//
 	// This member is required.
 	Groups []string
 
-	// The ID of an EC2-Classic instance to link to the ClassicLink-enabled VPC.
+	// The ID of the EC2-Classic instance.
 	//
 	// This member is required.
 	InstanceId *string
 
-	// The ID of a ClassicLink-enabled VPC.
+	// The ID of the ClassicLink-enabled VPC.
 	//
 	// This member is required.
 	VpcId *string
 
 	// Checks whether you have the required permissions for the action, without
 	// actually making the request, and provides an error response. If you have the
-	// required permissions, the error response is DryRunOperation. Otherwise, it is
-	// UnauthorizedOperation.
+	// required permissions, the error response is DryRunOperation . Otherwise, it is
+	// UnauthorizedOperation .
 	DryRun *bool
 
 	noSmithyDocumentSerde
@@ -108,7 +108,7 @@ func (c *Client) addOperationAttachClassicLinkVpcMiddlewares(stack *middleware.S
 	if err = awsmiddleware.AddRecordResponseTiming(stack); err != nil {
 		return err
 	}
-	if err = addClientUserAgent(stack); err != nil {
+	if err = addClientUserAgent(stack, options); err != nil {
 		return err
 	}
 	if err = smithyhttp.AddErrorCloseResponseBodyMiddleware(stack); err != nil {
@@ -121,6 +121,9 @@ func (c *Client) addOperationAttachClassicLinkVpcMiddlewares(stack *middleware.S
 		return err
 	}
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opAttachClassicLinkVpc(options.Region), middleware.Before); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {

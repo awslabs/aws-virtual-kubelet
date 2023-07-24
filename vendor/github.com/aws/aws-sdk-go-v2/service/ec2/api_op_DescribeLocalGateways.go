@@ -33,31 +33,19 @@ type DescribeLocalGatewaysInput struct {
 
 	// Checks whether you have the required permissions for the action, without
 	// actually making the request, and provides an error response. If you have the
-	// required permissions, the error response is DryRunOperation. Otherwise, it is
-	// UnauthorizedOperation.
+	// required permissions, the error response is DryRunOperation . Otherwise, it is
+	// UnauthorizedOperation .
 	DryRun *bool
 
 	// One or more filters.
+	//   - local-gateway-id - The ID of a local gateway.
+	//   - outpost-arn - The Amazon Resource Name (ARN) of the Outpost.
+	//   - owner-id - The ID of the Amazon Web Services account that owns the local
+	//   gateway.
+	//   - state - The state of the association.
 	Filters []types.Filter
 
-	// One or more filters.
-	//
-	// * local-gateway-id - The ID of a local gateway.
-	//
-	// *
-	// local-gateway-route-table-id - The ID of the local gateway route table.
-	//
-	// *
-	// local-gateway-route-table-virtual-interface-group-association-id - The ID of the
-	// association.
-	//
-	// * local-gateway-route-table-virtual-interface-group-id - The ID of
-	// the virtual interface group.
-	//
-	// * outpost-arn - The Amazon Resource Name (ARN) of
-	// the Outpost.
-	//
-	// * state - The state of the association.
+	// The IDs of the local gateways.
 	LocalGatewayIds []string
 
 	// The maximum number of results to return with a single call. To retrieve the
@@ -121,7 +109,7 @@ func (c *Client) addOperationDescribeLocalGatewaysMiddlewares(stack *middleware.
 	if err = awsmiddleware.AddRecordResponseTiming(stack); err != nil {
 		return err
 	}
-	if err = addClientUserAgent(stack); err != nil {
+	if err = addClientUserAgent(stack, options); err != nil {
 		return err
 	}
 	if err = smithyhttp.AddErrorCloseResponseBodyMiddleware(stack); err != nil {
@@ -131,6 +119,9 @@ func (c *Client) addOperationDescribeLocalGatewaysMiddlewares(stack *middleware.
 		return err
 	}
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opDescribeLocalGateways(options.Region), middleware.Before); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {
@@ -194,12 +185,13 @@ func NewDescribeLocalGatewaysPaginator(client DescribeLocalGatewaysAPIClient, pa
 		client:    client,
 		params:    params,
 		firstPage: true,
+		nextToken: params.NextToken,
 	}
 }
 
 // HasMorePages returns a boolean indicating whether more pages are available
 func (p *DescribeLocalGatewaysPaginator) HasMorePages() bool {
-	return p.firstPage || p.nextToken != nil
+	return p.firstPage || (p.nextToken != nil && len(*p.nextToken) != 0)
 }
 
 // NextPage retrieves the next DescribeLocalGateways page.
@@ -226,7 +218,10 @@ func (p *DescribeLocalGatewaysPaginator) NextPage(ctx context.Context, optFns ..
 	prevToken := p.nextToken
 	p.nextToken = result.NextToken
 
-	if p.options.StopOnDuplicateToken && prevToken != nil && p.nextToken != nil && *prevToken == *p.nextToken {
+	if p.options.StopOnDuplicateToken &&
+		prevToken != nil &&
+		p.nextToken != nil &&
+		*prevToken == *p.nextToken {
 		p.nextToken = nil
 	}
 
