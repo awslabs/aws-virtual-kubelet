@@ -11,9 +11,8 @@ import (
 )
 
 // Deletes a security group. If you attempt to delete a security group that is
-// associated with an instance, or is referenced by another security group, the
-// operation fails with InvalidGroup.InUse in EC2-Classic or DependencyViolation in
-// EC2-VPC.
+// associated with an instance or network interface or is referenced by another
+// security group, the operation fails with DependencyViolation .
 func (c *Client) DeleteSecurityGroup(ctx context.Context, params *DeleteSecurityGroupInput, optFns ...func(*Options)) (*DeleteSecurityGroupOutput, error) {
 	if params == nil {
 		params = &DeleteSecurityGroupInput{}
@@ -33,15 +32,16 @@ type DeleteSecurityGroupInput struct {
 
 	// Checks whether you have the required permissions for the action, without
 	// actually making the request, and provides an error response. If you have the
-	// required permissions, the error response is DryRunOperation. Otherwise, it is
-	// UnauthorizedOperation.
+	// required permissions, the error response is DryRunOperation . Otherwise, it is
+	// UnauthorizedOperation .
 	DryRun *bool
 
-	// The ID of the security group. Required for a nondefault VPC.
+	// The ID of the security group.
 	GroupId *string
 
-	// [EC2-Classic, default VPC] The name of the security group. You can specify
-	// either the security group name or the security group ID.
+	// [Default VPC] The name of the security group. You can specify either the
+	// security group name or the security group ID. For security groups in a
+	// nondefault VPC, you must specify the security group ID.
 	GroupName *string
 
 	noSmithyDocumentSerde
@@ -90,7 +90,7 @@ func (c *Client) addOperationDeleteSecurityGroupMiddlewares(stack *middleware.St
 	if err = awsmiddleware.AddRecordResponseTiming(stack); err != nil {
 		return err
 	}
-	if err = addClientUserAgent(stack); err != nil {
+	if err = addClientUserAgent(stack, options); err != nil {
 		return err
 	}
 	if err = smithyhttp.AddErrorCloseResponseBodyMiddleware(stack); err != nil {
@@ -100,6 +100,9 @@ func (c *Client) addOperationDeleteSecurityGroupMiddlewares(stack *middleware.St
 		return err
 	}
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opDeleteSecurityGroup(options.Region), middleware.Before); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {

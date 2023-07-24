@@ -46,7 +46,7 @@ type AssociateSubnetCidrBlockInput struct {
 
 type AssociateSubnetCidrBlockOutput struct {
 
-	// Information about the IPv6 CIDR block association.
+	// Information about the IPv6 association.
 	Ipv6CidrBlockAssociation *types.SubnetIpv6CidrBlockAssociation
 
 	// The ID of the subnet.
@@ -94,7 +94,7 @@ func (c *Client) addOperationAssociateSubnetCidrBlockMiddlewares(stack *middlewa
 	if err = awsmiddleware.AddRecordResponseTiming(stack); err != nil {
 		return err
 	}
-	if err = addClientUserAgent(stack); err != nil {
+	if err = addClientUserAgent(stack, options); err != nil {
 		return err
 	}
 	if err = smithyhttp.AddErrorCloseResponseBodyMiddleware(stack); err != nil {
@@ -107,6 +107,9 @@ func (c *Client) addOperationAssociateSubnetCidrBlockMiddlewares(stack *middlewa
 		return err
 	}
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opAssociateSubnetCidrBlock(options.Region), middleware.Before); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {

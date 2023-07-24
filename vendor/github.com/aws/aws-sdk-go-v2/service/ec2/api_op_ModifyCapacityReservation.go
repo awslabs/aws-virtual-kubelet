@@ -43,10 +43,13 @@ type ModifyCapacityReservationInput struct {
 	// Reserved. Capacity Reservations you have created are accepted by default.
 	Accept *bool
 
+	// Reserved for future use.
+	AdditionalInfo *string
+
 	// Checks whether you have the required permissions for the action, without
 	// actually making the request, and provides an error response. If you have the
-	// required permissions, the error response is DryRunOperation. Otherwise, it is
-	// UnauthorizedOperation.
+	// required permissions, the error response is DryRunOperation . Otherwise, it is
+	// UnauthorizedOperation .
 	DryRun *bool
 
 	// The date and time at which the Capacity Reservation expires. When a Capacity
@@ -56,22 +59,19 @@ type ModifyCapacityReservationInput struct {
 	// within an hour from the specified time. For example, if you specify 5/31/2019,
 	// 13:30:55, the Capacity Reservation is guaranteed to end between 13:30:55 and
 	// 14:30:55 on 5/31/2019. You must provide an EndDate value if EndDateType is
-	// limited. Omit EndDate if EndDateType is unlimited.
+	// limited . Omit EndDate if EndDateType is unlimited .
 	EndDate *time.Time
 
-	// Indicates the way in which the Capacity Reservation ends. A Capacity Reservation
-	// can have one of the following end types:
-	//
-	// * unlimited - The Capacity Reservation
-	// remains active until you explicitly cancel it. Do not provide an EndDate value
-	// if EndDateType is unlimited.
-	//
-	// * limited - The Capacity Reservation expires
-	// automatically at a specified date and time. You must provide an EndDate value if
-	// EndDateType is limited.
+	// Indicates the way in which the Capacity Reservation ends. A Capacity
+	// Reservation can have one of the following end types:
+	//   - unlimited - The Capacity Reservation remains active until you explicitly
+	//   cancel it. Do not provide an EndDate value if EndDateType is unlimited .
+	//   - limited - The Capacity Reservation expires automatically at a specified date
+	//   and time. You must provide an EndDate value if EndDateType is limited .
 	EndDateType types.EndDateType
 
-	// The number of instances for which to reserve capacity. Valid range: 1 - 1000
+	// The number of instances for which to reserve capacity. The number of instances
+	// can't be increased or decreased by more than 1000 in a single request.
 	InstanceCount *int32
 
 	noSmithyDocumentSerde
@@ -124,7 +124,7 @@ func (c *Client) addOperationModifyCapacityReservationMiddlewares(stack *middlew
 	if err = awsmiddleware.AddRecordResponseTiming(stack); err != nil {
 		return err
 	}
-	if err = addClientUserAgent(stack); err != nil {
+	if err = addClientUserAgent(stack, options); err != nil {
 		return err
 	}
 	if err = smithyhttp.AddErrorCloseResponseBodyMiddleware(stack); err != nil {
@@ -137,6 +137,9 @@ func (c *Client) addOperationModifyCapacityReservationMiddlewares(stack *middlew
 		return err
 	}
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opModifyCapacityReservation(options.Region), middleware.Before); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {

@@ -19,10 +19,10 @@ import (
 // protocols, you must also specify the destination port or range of ports. For the
 // ICMP protocol, you must also specify the ICMP type and code. If the security
 // group rule has a description, you do not need to specify the description to
-// revoke the rule. [EC2-Classic, default VPC] If the values you specify do not
-// match the existing rule's values, no error is returned, and the output describes
-// the security group rules that were not revoked. Amazon Web Services recommends
-// that you describe the security group to verify that the rules were removed. Rule
+// revoke the rule. For a default VPC, if the values you specify do not match the
+// existing rule's values, no error is returned, and the output describes the
+// security group rules that were not revoked. Amazon Web Services recommends that
+// you describe the security group to verify that the rules were removed. Rule
 // changes are propagated to instances within the security group as quickly as
 // possible. However, a small delay might occur.
 func (c *Client) RevokeSecurityGroupIngress(ctx context.Context, params *RevokeSecurityGroupIngressInput, optFns ...func(*Options)) (*RevokeSecurityGroupIngressOutput, error) {
@@ -48,53 +48,46 @@ type RevokeSecurityGroupIngressInput struct {
 
 	// Checks whether you have the required permissions for the action, without
 	// actually making the request, and provides an error response. If you have the
-	// required permissions, the error response is DryRunOperation. Otherwise, it is
-	// UnauthorizedOperation.
+	// required permissions, the error response is DryRunOperation . Otherwise, it is
+	// UnauthorizedOperation .
 	DryRun *bool
 
-	// The start of port range for the TCP and UDP protocols, or an ICMP type number.
-	// For the ICMP type number, use -1 to specify all ICMP types.
+	// If the protocol is TCP or UDP, this is the start of the port range. If the
+	// protocol is ICMP, this is the type number. A value of -1 indicates all ICMP
+	// types.
 	FromPort *int32
 
-	// The ID of the security group. You must specify either the security group ID or
-	// the security group name in the request. For security groups in a nondefault VPC,
-	// you must specify the security group ID.
+	// The ID of the security group.
 	GroupId *string
 
-	// [EC2-Classic, default VPC] The name of the security group. You must specify
-	// either the security group ID or the security group name in the request.
+	// [Default VPC] The name of the security group. You must specify either the
+	// security group ID or the security group name in the request. For security groups
+	// in a nondefault VPC, you must specify the security group ID.
 	GroupName *string
 
-	// The sets of IP permissions. You can't specify a source security group and a CIDR
-	// IP address range in the same set of permissions.
+	// The sets of IP permissions. You can't specify a source security group and a
+	// CIDR IP address range in the same set of permissions.
 	IpPermissions []types.IpPermission
 
-	// The IP protocol name (tcp, udp, icmp) or number (see Protocol Numbers
-	// (http://www.iana.org/assignments/protocol-numbers/protocol-numbers.xhtml)). Use
-	// -1 to specify all.
+	// The IP protocol name ( tcp , udp , icmp ) or number (see Protocol Numbers (http://www.iana.org/assignments/protocol-numbers/protocol-numbers.xhtml)
+	// ). Use -1 to specify all.
 	IpProtocol *string
 
 	// The IDs of the security group rules.
 	SecurityGroupRuleIds []string
 
-	// [EC2-Classic, default VPC] The name of the source security group. You can't
-	// specify this parameter in combination with the following parameters: the CIDR IP
-	// address range, the start of the port range, the IP protocol, and the end of the
-	// port range. For EC2-VPC, the source security group must be in the same VPC. To
-	// revoke a specific rule for an IP protocol and port range, use a set of IP
-	// permissions instead.
+	// [Default VPC] The name of the source security group. You can't specify this
+	// parameter in combination with the following parameters: the CIDR IP address
+	// range, the start of the port range, the IP protocol, and the end of the port
+	// range. The source security group must be in the same VPC. To revoke a specific
+	// rule for an IP protocol and port range, use a set of IP permissions instead.
 	SourceSecurityGroupName *string
 
-	// [EC2-Classic] The Amazon Web Services account ID of the source security group,
-	// if the source security group is in a different account. You can't specify this
-	// parameter in combination with the following parameters: the CIDR IP address
-	// range, the IP protocol, the start of the port range, and the end of the port
-	// range. To revoke a specific rule for an IP protocol and port range, use a set of
-	// IP permissions instead.
+	// Not supported.
 	SourceSecurityGroupOwnerId *string
 
-	// The end of port range for the TCP and UDP protocols, or an ICMP code number. For
-	// the ICMP code number, use -1 to specify all ICMP codes for the ICMP type.
+	// If the protocol is TCP or UDP, this is the end of the port range. If the
+	// protocol is ICMP, this is the code. A value of -1 indicates all ICMP codes.
 	ToPort *int32
 
 	noSmithyDocumentSerde
@@ -106,8 +99,7 @@ type RevokeSecurityGroupIngressOutput struct {
 	Return *bool
 
 	// The inbound rules that were unknown to the service. In some cases,
-	// unknownIpPermissionSet might be in a different format from the request
-	// parameter.
+	// unknownIpPermissionSet might be in a different format from the request parameter.
 	UnknownIpPermissions []types.IpPermission
 
 	// Metadata pertaining to the operation's result.
@@ -152,7 +144,7 @@ func (c *Client) addOperationRevokeSecurityGroupIngressMiddlewares(stack *middle
 	if err = awsmiddleware.AddRecordResponseTiming(stack); err != nil {
 		return err
 	}
-	if err = addClientUserAgent(stack); err != nil {
+	if err = addClientUserAgent(stack, options); err != nil {
 		return err
 	}
 	if err = smithyhttp.AddErrorCloseResponseBodyMiddleware(stack); err != nil {
@@ -162,6 +154,9 @@ func (c *Client) addOperationRevokeSecurityGroupIngressMiddlewares(stack *middle
 		return err
 	}
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opRevokeSecurityGroupIngress(options.Region), middleware.Before); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {

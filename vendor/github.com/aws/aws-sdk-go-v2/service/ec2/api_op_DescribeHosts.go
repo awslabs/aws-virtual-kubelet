@@ -12,10 +12,10 @@ import (
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
-// Describes the specified Dedicated Hosts or all your Dedicated Hosts. The results
-// describe only the Dedicated Hosts in the Region you're currently using. All
-// listed instances consume capacity on your Dedicated Host. Dedicated Hosts that
-// have recently been released are listed with the state released.
+// Describes the specified Dedicated Hosts or all your Dedicated Hosts. The
+// results describe only the Dedicated Hosts in the Region you're currently using.
+// All listed instances consume capacity on your Dedicated Host. Dedicated Hosts
+// that have recently been released are listed with the state released .
 func (c *Client) DescribeHosts(ctx context.Context, params *DescribeHostsInput, optFns ...func(*Options)) (*DescribeHostsOutput, error) {
 	if params == nil {
 		params = &DescribeHostsInput{}
@@ -34,29 +34,18 @@ func (c *Client) DescribeHosts(ctx context.Context, params *DescribeHostsInput, 
 type DescribeHostsInput struct {
 
 	// The filters.
-	//
-	// * auto-placement - Whether auto-placement is enabled or disabled
-	// (on | off).
-	//
-	// * availability-zone - The Availability Zone of the host.
-	//
-	// *
-	// client-token - The idempotency token that you provided when you allocated the
-	// host.
-	//
-	// * host-reservation-id - The ID of the reservation assigned to this
-	// host.
-	//
-	// * instance-type - The instance type size that the Dedicated Host is
-	// configured to support.
-	//
-	// * state - The allocation state of the Dedicated Host
-	// (available | under-assessment | permanent-failure | released |
-	// released-permanent-failure).
-	//
-	// * tag-key - The key of a tag assigned to the
-	// resource. Use this filter to find all resources assigned a tag with a specific
-	// key, regardless of the tag value.
+	//   - auto-placement - Whether auto-placement is enabled or disabled ( on | off ).
+	//   - availability-zone - The Availability Zone of the host.
+	//   - client-token - The idempotency token that you provided when you allocated
+	//   the host.
+	//   - host-reservation-id - The ID of the reservation assigned to this host.
+	//   - instance-type - The instance type size that the Dedicated Host is configured
+	//   to support.
+	//   - state - The allocation state of the Dedicated Host ( available |
+	//   under-assessment | permanent-failure | released | released-permanent-failure
+	//   ).
+	//   - tag-key - The key of a tag assigned to the resource. Use this filter to find
+	//   all resources assigned a tag with a specific key, regardless of the tag value.
 	Filter []types.Filter
 
 	// The IDs of the Dedicated Hosts. The IDs are used for targeted instance launches.
@@ -126,7 +115,7 @@ func (c *Client) addOperationDescribeHostsMiddlewares(stack *middleware.Stack, o
 	if err = awsmiddleware.AddRecordResponseTiming(stack); err != nil {
 		return err
 	}
-	if err = addClientUserAgent(stack); err != nil {
+	if err = addClientUserAgent(stack, options); err != nil {
 		return err
 	}
 	if err = smithyhttp.AddErrorCloseResponseBodyMiddleware(stack); err != nil {
@@ -136,6 +125,9 @@ func (c *Client) addOperationDescribeHostsMiddlewares(stack *middleware.Stack, o
 		return err
 	}
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opDescribeHosts(options.Region), middleware.Before); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {
@@ -200,12 +192,13 @@ func NewDescribeHostsPaginator(client DescribeHostsAPIClient, params *DescribeHo
 		client:    client,
 		params:    params,
 		firstPage: true,
+		nextToken: params.NextToken,
 	}
 }
 
 // HasMorePages returns a boolean indicating whether more pages are available
 func (p *DescribeHostsPaginator) HasMorePages() bool {
-	return p.firstPage || p.nextToken != nil
+	return p.firstPage || (p.nextToken != nil && len(*p.nextToken) != 0)
 }
 
 // NextPage retrieves the next DescribeHosts page.
@@ -232,7 +225,10 @@ func (p *DescribeHostsPaginator) NextPage(ctx context.Context, optFns ...func(*O
 	prevToken := p.nextToken
 	p.nextToken = result.NextToken
 
-	if p.options.StopOnDuplicateToken && prevToken != nil && p.nextToken != nil && *prevToken == *p.nextToken {
+	if p.options.StopOnDuplicateToken &&
+		prevToken != nil &&
+		p.nextToken != nil &&
+		*prevToken == *p.nextToken {
 		p.nextToken = nil
 	}
 

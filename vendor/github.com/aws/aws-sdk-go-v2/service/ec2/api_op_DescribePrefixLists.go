@@ -35,16 +35,13 @@ type DescribePrefixListsInput struct {
 
 	// Checks whether you have the required permissions for the action, without
 	// actually making the request, and provides an error response. If you have the
-	// required permissions, the error response is DryRunOperation. Otherwise, it is
-	// UnauthorizedOperation.
+	// required permissions, the error response is DryRunOperation . Otherwise, it is
+	// UnauthorizedOperation .
 	DryRun *bool
 
 	// One or more filters.
-	//
-	// * prefix-list-id: The ID of a prefix list.
-	//
-	// *
-	// prefix-list-name: The name of a prefix list.
+	//   - prefix-list-id : The ID of a prefix list.
+	//   - prefix-list-name : The name of a prefix list.
 	Filters []types.Filter
 
 	// The maximum number of results to return with a single call. To retrieve the
@@ -111,7 +108,7 @@ func (c *Client) addOperationDescribePrefixListsMiddlewares(stack *middleware.St
 	if err = awsmiddleware.AddRecordResponseTiming(stack); err != nil {
 		return err
 	}
-	if err = addClientUserAgent(stack); err != nil {
+	if err = addClientUserAgent(stack, options); err != nil {
 		return err
 	}
 	if err = smithyhttp.AddErrorCloseResponseBodyMiddleware(stack); err != nil {
@@ -121,6 +118,9 @@ func (c *Client) addOperationDescribePrefixListsMiddlewares(stack *middleware.St
 		return err
 	}
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opDescribePrefixLists(options.Region), middleware.Before); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {
@@ -135,8 +135,8 @@ func (c *Client) addOperationDescribePrefixListsMiddlewares(stack *middleware.St
 	return nil
 }
 
-// DescribePrefixListsAPIClient is a client that implements the DescribePrefixLists
-// operation.
+// DescribePrefixListsAPIClient is a client that implements the
+// DescribePrefixLists operation.
 type DescribePrefixListsAPIClient interface {
 	DescribePrefixLists(context.Context, *DescribePrefixListsInput, ...func(*Options)) (*DescribePrefixListsOutput, error)
 }
@@ -184,12 +184,13 @@ func NewDescribePrefixListsPaginator(client DescribePrefixListsAPIClient, params
 		client:    client,
 		params:    params,
 		firstPage: true,
+		nextToken: params.NextToken,
 	}
 }
 
 // HasMorePages returns a boolean indicating whether more pages are available
 func (p *DescribePrefixListsPaginator) HasMorePages() bool {
-	return p.firstPage || p.nextToken != nil
+	return p.firstPage || (p.nextToken != nil && len(*p.nextToken) != 0)
 }
 
 // NextPage retrieves the next DescribePrefixLists page.
@@ -216,7 +217,10 @@ func (p *DescribePrefixListsPaginator) NextPage(ctx context.Context, optFns ...f
 	prevToken := p.nextToken
 	p.nextToken = result.NextToken
 
-	if p.options.StopOnDuplicateToken && prevToken != nil && p.nextToken != nil && *prevToken == *p.nextToken {
+	if p.options.StopOnDuplicateToken &&
+		prevToken != nil &&
+		p.nextToken != nil &&
+		*prevToken == *p.nextToken {
 		p.nextToken = nil
 	}
 
