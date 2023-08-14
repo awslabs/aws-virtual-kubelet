@@ -33,17 +33,22 @@ type ServeMux interface {
 	Handle(path string, h http.Handler)
 }
 
-type PodHandlerConfig struct { // nolint:golint
-	RunInContainer   ContainerExecHandlerFunc
-	GetContainerLogs ContainerLogsHandlerFunc
+type PodHandlerConfig struct { //nolint:golint
+	RunInContainer    ContainerExecHandlerFunc
+	AttachToContainer ContainerAttachHandlerFunc
+	PortForward       PortForwardHandlerFunc
+	GetContainerLogs  ContainerLogsHandlerFunc
 	// GetPods is meant to enumerate the pods that the provider knows about
 	GetPods PodListerFunc
 	// GetPodsFromKubernetes is meant to enumerate the pods that the node is meant to be running
 	GetPodsFromKubernetes PodListerFunc
 	GetStatsSummary       PodStatsSummaryHandlerFunc
+	GetMetricsResource    PodMetricsResourceHandlerFunc
 	StreamIdleTimeout     time.Duration
 	StreamCreationTimeout time.Duration
 }
+
+const MetricsResourceRouteSuffix = "/metrics/resource"
 
 // PodHandler creates an http handler for interacting with pods/containers.
 func PodHandler(p PodHandlerConfig, debug bool) http.Handler {
@@ -54,7 +59,6 @@ func PodHandler(p PodHandlerConfig, debug bool) http.Handler {
 	if debug {
 		r.HandleFunc("/runningpods/", HandleRunningPods(p.GetPods)).Methods("GET")
 	}
-
 	r.HandleFunc("/pods", HandleRunningPods(p.GetPodsFromKubernetes)).Methods("GET")
 	r.HandleFunc("/containerLogs/{namespace}/{pod}/{container}", HandleContainerLogs(p.GetContainerLogs)).Methods("GET")
 	r.HandleFunc(
@@ -65,6 +69,22 @@ func PodHandler(p PodHandlerConfig, debug bool) http.Handler {
 			WithExecStreamIdleTimeout(p.StreamIdleTimeout),
 		),
 	).Methods("POST", "GET")
+	r.HandleFunc(
+		"/attach/{namespace}/{pod}/{container}",
+		HandleContainerAttach(
+			p.AttachToContainer,
+			WithExecStreamCreationTimeout(p.StreamCreationTimeout),
+			WithExecStreamIdleTimeout(p.StreamIdleTimeout),
+		),
+	).Methods("POST", "GET")
+	r.HandleFunc(
+		"/portForward/{namespace}/{pod}",
+		HandlePortForward(
+			p.PortForward,
+			WithPortForwardStreamIdleTimeout(p.StreamCreationTimeout),
+			WithPortForwardCreationTimeout(p.StreamIdleTimeout),
+		),
+	).Methods("POST", "GET")
 
 	if p.GetStatsSummary != nil {
 		f := HandlePodStatsSummary(p.GetStatsSummary)
@@ -72,6 +92,11 @@ func PodHandler(p PodHandlerConfig, debug bool) http.Handler {
 		r.HandleFunc("/stats/summary/", f).Methods("GET")
 	}
 
+	if p.GetMetricsResource != nil {
+		f := HandlePodMetricsResource(p.GetMetricsResource)
+		r.HandleFunc(MetricsResourceRouteSuffix, f).Methods("GET")
+		r.HandleFunc(MetricsResourceRouteSuffix+"/", f).Methods("GET")
+	}
 	r.NotFoundHandler = http.HandlerFunc(NotFound)
 	return r
 }
@@ -79,7 +104,7 @@ func PodHandler(p PodHandlerConfig, debug bool) http.Handler {
 // PodStatsSummaryHandler creates an http handler for serving pod metrics.
 //
 // If the passed in handler func is nil this will create handlers which only
-//  serves http.StatusNotImplemented
+// serves http.StatusNotImplemented
 func PodStatsSummaryHandler(f PodStatsSummaryHandlerFunc) http.Handler {
 	if f == nil {
 		return http.HandlerFunc(NotImplemented)
@@ -92,6 +117,26 @@ func PodStatsSummaryHandler(f PodStatsSummaryHandlerFunc) http.Handler {
 
 	r.Handle(summaryRoute, ochttp.WithRouteTag(h, "PodStatsSummaryHandler")).Methods("GET")
 	r.Handle(summaryRoute+"/", ochttp.WithRouteTag(h, "PodStatsSummaryHandler")).Methods("GET")
+
+	r.NotFoundHandler = http.HandlerFunc(NotFound)
+	return r
+}
+
+// PodMetricsResourceHandler creates an http handler for serving pod metrics.
+//
+// If the passed in handler func is nil this will create handlers which only
+// serves http.StatusNotImplemented
+func PodMetricsResourceHandler(f PodMetricsResourceHandlerFunc) http.Handler {
+	if f == nil {
+		return http.HandlerFunc(NotImplemented)
+	}
+
+	r := mux.NewRouter()
+
+	h := HandlePodMetricsResource(f)
+
+	r.Handle(MetricsResourceRouteSuffix, ochttp.WithRouteTag(h, "PodMetricsResourceHandler")).Methods("GET")
+	r.Handle(MetricsResourceRouteSuffix+"/", ochttp.WithRouteTag(h, "PodMetricsResourceHandler")).Methods("GET")
 
 	r.NotFoundHandler = http.HandlerFunc(NotFound)
 	return r
@@ -111,7 +156,8 @@ func AttachPodRoutes(p PodHandlerConfig, mux ServeMux, debug bool) {
 // The main reason for this struct is in case of expansion we do not need to break
 // the package level API.
 type PodMetricsConfig struct {
-	GetStatsSummary PodStatsSummaryHandlerFunc
+	GetStatsSummary    PodStatsSummaryHandlerFunc
+	GetMetricsResource PodMetricsResourceHandlerFunc
 }
 
 // AttachPodMetricsRoutes adds the http routes for pod/node metrics to the passed in serve mux.
@@ -120,6 +166,7 @@ type PodMetricsConfig struct {
 // these routes get called by the Kubernetes API server.
 func AttachPodMetricsRoutes(p PodMetricsConfig, mux ServeMux) {
 	mux.Handle("/", InstrumentHandler(HandlePodStatsSummary(p.GetStatsSummary)))
+	mux.Handle("/", InstrumentHandler(HandlePodMetricsResource(p.GetMetricsResource)))
 }
 
 func instrumentRequest(r *http.Request) *http.Request {
