@@ -4,6 +4,7 @@ package s3
 
 import (
 	"context"
+	"fmt"
 	awsmiddleware "github.com/aws/aws-sdk-go-v2/aws/middleware"
 	"github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	s3cust "github.com/aws/aws-sdk-go-v2/service/s3/internal/customizations"
@@ -33,8 +34,8 @@ import (
 // configurations that you can create per bucket, see Amazon S3 service quotas (https://docs.aws.amazon.com/general/latest/gr/s3.html#limits_s3)
 // in Amazon Web Services General Reference. By default, only the bucket owner can
 // configure notifications on a bucket. However, bucket owners can use a bucket
-// policy to grant permission to other users to set this configuration with
-// s3:PutBucketNotification permission. The PUT notification is an atomic
+// policy to grant permission to other users to set this configuration with the
+// required s3:PutBucketNotification permission. The PUT notification is an atomic
 // operation. For example, suppose your notification configuration includes SNS
 // topic, SQS queue, and Lambda function configurations. When you send a PUT
 // request with this configuration, Amazon S3 sends test messages to your SNS
@@ -81,9 +82,14 @@ type PutBucketNotificationConfigurationInput struct {
 
 	// Skips validation of Amazon SQS, Amazon SNS, and Lambda destinations. True or
 	// false value.
-	SkipDestinationValidation bool
+	SkipDestinationValidation *bool
 
 	noSmithyDocumentSerde
+}
+
+func (in *PutBucketNotificationConfigurationInput) bindEndpointParams(p *EndpointParameters) {
+	p.Bucket = in.Bucket
+
 }
 
 type PutBucketNotificationConfigurationOutput struct {
@@ -94,12 +100,22 @@ type PutBucketNotificationConfigurationOutput struct {
 }
 
 func (c *Client) addOperationPutBucketNotificationConfigurationMiddlewares(stack *middleware.Stack, options Options) (err error) {
+	if err := stack.Serialize.Add(&setOperationInputMiddleware{}, middleware.After); err != nil {
+		return err
+	}
 	err = stack.Serialize.Add(&awsRestxml_serializeOpPutBucketNotificationConfiguration{}, middleware.After)
 	if err != nil {
 		return err
 	}
 	err = stack.Deserialize.Add(&awsRestxml_deserializeOpPutBucketNotificationConfiguration{}, middleware.After)
 	if err != nil {
+		return err
+	}
+	if err := addProtocolFinalizerMiddlewares(stack, options, "PutBucketNotificationConfiguration"); err != nil {
+		return fmt.Errorf("add protocol finalizers: %v", err)
+	}
+
+	if err = addlegacyEndpointContextSetter(stack, options); err != nil {
 		return err
 	}
 	if err = addSetLoggerMiddleware(stack, options); err != nil {
@@ -120,16 +136,13 @@ func (c *Client) addOperationPutBucketNotificationConfigurationMiddlewares(stack
 	if err = addRetryMiddlewares(stack, options); err != nil {
 		return err
 	}
-	if err = addHTTPSignerV4Middleware(stack, options); err != nil {
-		return err
-	}
 	if err = awsmiddleware.AddRawResponseToMetadata(stack); err != nil {
 		return err
 	}
 	if err = awsmiddleware.AddRecordResponseTiming(stack); err != nil {
 		return err
 	}
-	if err = addClientUserAgent(stack); err != nil {
+	if err = addClientUserAgent(stack, options); err != nil {
 		return err
 	}
 	if err = smithyhttp.AddErrorCloseResponseBodyMiddleware(stack); err != nil {
@@ -138,7 +151,7 @@ func (c *Client) addOperationPutBucketNotificationConfigurationMiddlewares(stack
 	if err = smithyhttp.AddCloseResponseBodyMiddleware(stack); err != nil {
 		return err
 	}
-	if err = swapWithCustomHTTPSignerMiddleware(stack, options); err != nil {
+	if err = addSetLegacyContextSigningOptionsMiddleware(stack); err != nil {
 		return err
 	}
 	if err = addOpPutBucketNotificationConfigurationValidationMiddleware(stack); err != nil {
@@ -168,14 +181,26 @@ func (c *Client) addOperationPutBucketNotificationConfigurationMiddlewares(stack
 	if err = addRequestResponseLogging(stack, options); err != nil {
 		return err
 	}
+	if err = addDisableHTTPSMiddleware(stack, options); err != nil {
+		return err
+	}
+	if err = addSerializeImmutableHostnameBucketMiddleware(stack, options); err != nil {
+		return err
+	}
 	return nil
+}
+
+func (v *PutBucketNotificationConfigurationInput) bucket() (string, bool) {
+	if v.Bucket == nil {
+		return "", false
+	}
+	return *v.Bucket, true
 }
 
 func newServiceMetadataMiddleware_opPutBucketNotificationConfiguration(region string) *awsmiddleware.RegisterServiceMetadata {
 	return &awsmiddleware.RegisterServiceMetadata{
 		Region:        region,
 		ServiceID:     ServiceID,
-		SigningName:   "s3",
 		OperationName: "PutBucketNotificationConfiguration",
 	}
 }

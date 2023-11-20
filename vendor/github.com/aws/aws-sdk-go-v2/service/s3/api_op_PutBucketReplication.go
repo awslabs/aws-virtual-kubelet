@@ -4,6 +4,7 @@ package s3
 
 import (
 	"context"
+	"fmt"
 	awsmiddleware "github.com/aws/aws-sdk-go-v2/aws/middleware"
 	"github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	internalChecksum "github.com/aws/aws-sdk-go-v2/service/internal/checksum"
@@ -19,17 +20,19 @@ import (
 // request body. In the replication configuration, you provide the name of the
 // destination bucket or buckets where you want Amazon S3 to replicate objects, the
 // IAM role that Amazon S3 can assume to replicate objects on your behalf, and
-// other relevant information. A replication configuration must include at least
-// one rule, and can contain a maximum of 1,000. Each rule identifies a subset of
-// objects to replicate by filtering the objects in the source bucket. To choose
-// additional subsets of objects to replicate, add a rule for each subset. To
-// specify a subset of the objects in the source bucket to apply a replication rule
-// to, add the Filter element as a child of the Rule element. You can filter
-// objects based on an object key prefix, one or more object tags, or both. When
-// you add the Filter element in the configuration, you must also add the following
-// elements: DeleteMarkerReplication , Status , and Priority . If you are using an
-// earlier version of the replication configuration, Amazon S3 handles replication
-// of delete markers differently. For more information, see Backward Compatibility (https://docs.aws.amazon.com/AmazonS3/latest/dev/replication-add-config.html#replication-backward-compat-considerations)
+// other relevant information. You can invoke this request for a specific Amazon
+// Web Services Region by using the aws:RequestedRegion (https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_condition-keys.html#condition-keys-requestedregion)
+// condition key. A replication configuration must include at least one rule, and
+// can contain a maximum of 1,000. Each rule identifies a subset of objects to
+// replicate by filtering the objects in the source bucket. To choose additional
+// subsets of objects to replicate, add a rule for each subset. To specify a subset
+// of the objects in the source bucket to apply a replication rule to, add the
+// Filter element as a child of the Rule element. You can filter objects based on
+// an object key prefix, one or more object tags, or both. When you add the Filter
+// element in the configuration, you must also add the following elements:
+// DeleteMarkerReplication , Status , and Priority . If you are using an earlier
+// version of the replication configuration, Amazon S3 handles replication of
+// delete markers differently. For more information, see Backward Compatibility (https://docs.aws.amazon.com/AmazonS3/latest/dev/replication-add-config.html#replication-backward-compat-considerations)
 // . For information about enabling versioning on a bucket, see Using Versioning (https://docs.aws.amazon.com/AmazonS3/latest/dev/Versioning.html)
 // . Handling Replication of Encrypted Objects By default, Amazon S3 doesn't
 // replicate objects that are stored at rest using server-side encryption with KMS
@@ -108,6 +111,11 @@ type PutBucketReplicationInput struct {
 	noSmithyDocumentSerde
 }
 
+func (in *PutBucketReplicationInput) bindEndpointParams(p *EndpointParameters) {
+	p.Bucket = in.Bucket
+
+}
+
 type PutBucketReplicationOutput struct {
 	// Metadata pertaining to the operation's result.
 	ResultMetadata middleware.Metadata
@@ -116,12 +124,22 @@ type PutBucketReplicationOutput struct {
 }
 
 func (c *Client) addOperationPutBucketReplicationMiddlewares(stack *middleware.Stack, options Options) (err error) {
+	if err := stack.Serialize.Add(&setOperationInputMiddleware{}, middleware.After); err != nil {
+		return err
+	}
 	err = stack.Serialize.Add(&awsRestxml_serializeOpPutBucketReplication{}, middleware.After)
 	if err != nil {
 		return err
 	}
 	err = stack.Deserialize.Add(&awsRestxml_deserializeOpPutBucketReplication{}, middleware.After)
 	if err != nil {
+		return err
+	}
+	if err := addProtocolFinalizerMiddlewares(stack, options, "PutBucketReplication"); err != nil {
+		return fmt.Errorf("add protocol finalizers: %v", err)
+	}
+
+	if err = addlegacyEndpointContextSetter(stack, options); err != nil {
 		return err
 	}
 	if err = addSetLoggerMiddleware(stack, options); err != nil {
@@ -142,16 +160,13 @@ func (c *Client) addOperationPutBucketReplicationMiddlewares(stack *middleware.S
 	if err = addRetryMiddlewares(stack, options); err != nil {
 		return err
 	}
-	if err = addHTTPSignerV4Middleware(stack, options); err != nil {
-		return err
-	}
 	if err = awsmiddleware.AddRawResponseToMetadata(stack); err != nil {
 		return err
 	}
 	if err = awsmiddleware.AddRecordResponseTiming(stack); err != nil {
 		return err
 	}
-	if err = addClientUserAgent(stack); err != nil {
+	if err = addClientUserAgent(stack, options); err != nil {
 		return err
 	}
 	if err = smithyhttp.AddErrorCloseResponseBodyMiddleware(stack); err != nil {
@@ -160,7 +175,7 @@ func (c *Client) addOperationPutBucketReplicationMiddlewares(stack *middleware.S
 	if err = smithyhttp.AddCloseResponseBodyMiddleware(stack); err != nil {
 		return err
 	}
-	if err = swapWithCustomHTTPSignerMiddleware(stack, options); err != nil {
+	if err = addSetLegacyContextSigningOptionsMiddleware(stack); err != nil {
 		return err
 	}
 	if err = addOpPutBucketReplicationValidationMiddleware(stack); err != nil {
@@ -193,14 +208,26 @@ func (c *Client) addOperationPutBucketReplicationMiddlewares(stack *middleware.S
 	if err = addRequestResponseLogging(stack, options); err != nil {
 		return err
 	}
+	if err = addDisableHTTPSMiddleware(stack, options); err != nil {
+		return err
+	}
+	if err = addSerializeImmutableHostnameBucketMiddleware(stack, options); err != nil {
+		return err
+	}
 	return nil
+}
+
+func (v *PutBucketReplicationInput) bucket() (string, bool) {
+	if v.Bucket == nil {
+		return "", false
+	}
+	return *v.Bucket, true
 }
 
 func newServiceMetadataMiddleware_opPutBucketReplication(region string) *awsmiddleware.RegisterServiceMetadata {
 	return &awsmiddleware.RegisterServiceMetadata{
 		Region:        region,
 		ServiceID:     ServiceID,
-		SigningName:   "s3",
 		OperationName: "PutBucketReplication",
 	}
 }
