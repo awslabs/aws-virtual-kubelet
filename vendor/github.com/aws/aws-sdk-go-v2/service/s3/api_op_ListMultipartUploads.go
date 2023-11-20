@@ -4,6 +4,7 @@ package s3
 
 import (
 	"context"
+	"fmt"
 	awsmiddleware "github.com/aws/aws-sdk-go-v2/aws/middleware"
 	"github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	s3cust "github.com/aws/aws-sdk-go-v2/service/s3/internal/customizations"
@@ -65,7 +66,7 @@ type ListMultipartUploadsInput struct {
 	// AccessPointName-AccountId.outpostID.s3-outposts.Region.amazonaws.com . When you
 	// use this action with S3 on Outposts through the Amazon Web Services SDKs, you
 	// provide the Outposts access point ARN in place of the bucket name. For more
-	// information about S3 on Outposts ARNs, see What is S3 on Outposts (https://docs.aws.amazon.com/AmazonS3/latest/userguide/S3onOutposts.html)
+	// information about S3 on Outposts ARNs, see What is S3 on Outposts? (https://docs.aws.amazon.com/AmazonS3/latest/userguide/S3onOutposts.html)
 	// in the Amazon S3 User Guide.
 	//
 	// This member is required.
@@ -80,10 +81,10 @@ type ListMultipartUploadsInput struct {
 	Delimiter *string
 
 	// Requests Amazon S3 to encode the object keys in the response and specifies the
-	// encoding method to use. An object key may contain any Unicode character;
-	// however, XML 1.0 parser cannot parse some characters, such as characters with an
-	// ASCII value from 0 to 10. For characters that are not supported in XML 1.0, you
-	// can add this parameter to request that Amazon S3 encode the keys in the
+	// encoding method to use. An object key can contain any Unicode character;
+	// however, the XML 1.0 parser cannot parse some characters, such as characters
+	// with an ASCII value from 0 to 10. For characters that are not supported in XML
+	// 1.0, you can add this parameter to request that Amazon S3 encode the keys in the
 	// response.
 	EncodingType types.EncodingType
 
@@ -92,7 +93,7 @@ type ListMultipartUploadsInput struct {
 	// (access denied).
 	ExpectedBucketOwner *string
 
-	// Together with upload-id-marker, this parameter specifies the multipart upload
+	// Together with upload-id-marker , this parameter specifies the multipart upload
 	// after which listing should begin. If upload-id-marker is not specified, only
 	// the keys lexicographically greater than the specified key-marker will be
 	// included in the list. If upload-id-marker is specified, any multipart uploads
@@ -104,13 +105,22 @@ type ListMultipartUploadsInput struct {
 	// Sets the maximum number of multipart uploads, from 1 to 1,000, to return in the
 	// response body. 1,000 is the maximum number of uploads that can be returned in a
 	// response.
-	MaxUploads int32
+	MaxUploads *int32
 
 	// Lists in-progress uploads only for those keys that begin with the specified
 	// prefix. You can use prefixes to separate a bucket into different grouping of
-	// keys. (You can think of using prefix to make groups in the same way you'd use a
-	// folder in a file system.)
+	// keys. (You can think of using prefix to make groups in the same way that you'd
+	// use a folder in a file system.)
 	Prefix *string
+
+	// Confirms that the requester knows that they will be charged for the request.
+	// Bucket owners need not specify this parameter in their requests. If either the
+	// source or destination Amazon S3 bucket has Requester Pays enabled, the requester
+	// will pay for corresponding charges to copy the object. For information about
+	// downloading objects from Requester Pays buckets, see Downloading Objects in
+	// Requester Pays Buckets (https://docs.aws.amazon.com/AmazonS3/latest/dev/ObjectsinRequesterPaysBuckets.html)
+	// in the Amazon S3 User Guide.
+	RequestPayer types.RequestPayer
 
 	// Together with key-marker, specifies the multipart upload after which listing
 	// should begin. If key-marker is not specified, the upload-id-marker parameter is
@@ -120,6 +130,11 @@ type ListMultipartUploadsInput struct {
 	UploadIdMarker *string
 
 	noSmithyDocumentSerde
+}
+
+func (in *ListMultipartUploadsInput) bindEndpointParams(p *EndpointParameters) {
+	p.Bucket = in.Bucket
+
 }
 
 type ListMultipartUploadsOutput struct {
@@ -138,8 +153,8 @@ type ListMultipartUploadsOutput struct {
 	Delimiter *string
 
 	// Encoding type used by Amazon S3 to encode object keys in the response. If you
-	// specify encoding-type request parameter, Amazon S3 includes this element in the
-	// response, and returns encoded key name values in the following response
+	// specify the encoding-type request parameter, Amazon S3 includes this element in
+	// the response, and returns encoded key name values in the following response
 	// elements: Delimiter , KeyMarker , Prefix , NextKeyMarker , Key .
 	EncodingType types.EncodingType
 
@@ -147,14 +162,14 @@ type ListMultipartUploadsOutput struct {
 	// of true indicates that the list was truncated. The list can be truncated if the
 	// number of multipart uploads exceeds the limit allowed or specified by max
 	// uploads.
-	IsTruncated bool
+	IsTruncated *bool
 
 	// The key at or after which the listing began.
 	KeyMarker *string
 
 	// Maximum number of multipart uploads that could have been included in the
 	// response.
-	MaxUploads int32
+	MaxUploads *int32
 
 	// When a list is truncated, this element specifies the value that should be used
 	// for the key-marker request parameter in a subsequent request.
@@ -167,6 +182,10 @@ type ListMultipartUploadsOutput struct {
 	// When a prefix is provided in the request, this field contains the specified
 	// prefix. The result contains only keys starting with the specified prefix.
 	Prefix *string
+
+	// If present, indicates that the requester was successfully charged for the
+	// request.
+	RequestCharged types.RequestCharged
 
 	// Upload ID after which listing began.
 	UploadIdMarker *string
@@ -182,12 +201,22 @@ type ListMultipartUploadsOutput struct {
 }
 
 func (c *Client) addOperationListMultipartUploadsMiddlewares(stack *middleware.Stack, options Options) (err error) {
+	if err := stack.Serialize.Add(&setOperationInputMiddleware{}, middleware.After); err != nil {
+		return err
+	}
 	err = stack.Serialize.Add(&awsRestxml_serializeOpListMultipartUploads{}, middleware.After)
 	if err != nil {
 		return err
 	}
 	err = stack.Deserialize.Add(&awsRestxml_deserializeOpListMultipartUploads{}, middleware.After)
 	if err != nil {
+		return err
+	}
+	if err := addProtocolFinalizerMiddlewares(stack, options, "ListMultipartUploads"); err != nil {
+		return fmt.Errorf("add protocol finalizers: %v", err)
+	}
+
+	if err = addlegacyEndpointContextSetter(stack, options); err != nil {
 		return err
 	}
 	if err = addSetLoggerMiddleware(stack, options); err != nil {
@@ -208,16 +237,13 @@ func (c *Client) addOperationListMultipartUploadsMiddlewares(stack *middleware.S
 	if err = addRetryMiddlewares(stack, options); err != nil {
 		return err
 	}
-	if err = addHTTPSignerV4Middleware(stack, options); err != nil {
-		return err
-	}
 	if err = awsmiddleware.AddRawResponseToMetadata(stack); err != nil {
 		return err
 	}
 	if err = awsmiddleware.AddRecordResponseTiming(stack); err != nil {
 		return err
 	}
-	if err = addClientUserAgent(stack); err != nil {
+	if err = addClientUserAgent(stack, options); err != nil {
 		return err
 	}
 	if err = smithyhttp.AddErrorCloseResponseBodyMiddleware(stack); err != nil {
@@ -226,7 +252,7 @@ func (c *Client) addOperationListMultipartUploadsMiddlewares(stack *middleware.S
 	if err = smithyhttp.AddCloseResponseBodyMiddleware(stack); err != nil {
 		return err
 	}
-	if err = swapWithCustomHTTPSignerMiddleware(stack, options); err != nil {
+	if err = addSetLegacyContextSigningOptionsMiddleware(stack); err != nil {
 		return err
 	}
 	if err = addOpListMultipartUploadsValidationMiddleware(stack); err != nil {
@@ -256,14 +282,26 @@ func (c *Client) addOperationListMultipartUploadsMiddlewares(stack *middleware.S
 	if err = addRequestResponseLogging(stack, options); err != nil {
 		return err
 	}
+	if err = addDisableHTTPSMiddleware(stack, options); err != nil {
+		return err
+	}
+	if err = addSerializeImmutableHostnameBucketMiddleware(stack, options); err != nil {
+		return err
+	}
 	return nil
+}
+
+func (v *ListMultipartUploadsInput) bucket() (string, bool) {
+	if v.Bucket == nil {
+		return "", false
+	}
+	return *v.Bucket, true
 }
 
 func newServiceMetadataMiddleware_opListMultipartUploads(region string) *awsmiddleware.RegisterServiceMetadata {
 	return &awsmiddleware.RegisterServiceMetadata{
 		Region:        region,
 		ServiceID:     ServiceID,
-		SigningName:   "s3",
 		OperationName: "ListMultipartUploads",
 	}
 }

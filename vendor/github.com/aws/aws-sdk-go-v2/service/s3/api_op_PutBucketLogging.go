@@ -4,6 +4,7 @@ package s3
 
 import (
 	"context"
+	"fmt"
 	awsmiddleware "github.com/aws/aws-sdk-go-v2/aws/middleware"
 	"github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	internalChecksum "github.com/aws/aws-sdk-go-v2/service/internal/checksum"
@@ -25,18 +26,18 @@ import (
 // granted using policies. For more information, see Permissions for server access
 // log delivery (https://docs.aws.amazon.com/AmazonS3/latest/userguide/enable-server-access-logging.html#grant-log-delivery-permissions-general)
 // in the Amazon S3 User Guide. Grantee Values You can specify the person (grantee)
-// to whom you're assigning access rights (using request elements) in the following
-// ways:
+// to whom you're assigning access rights (by using request elements) in the
+// following ways:
 //   - By the person's ID: <>ID<><>GranteesEmail<> DisplayName is optional and
 //     ignored in the request.
 //   - By Email address: <>Grantees@email.com<> The grantee is resolved to the
-//     CanonicalUser and, in a response to a GET Object acl request, appears as the
+//     CanonicalUser and, in a response to a GETObjectAcl request, appears as the
 //     CanonicalUser.
 //   - By URI: <>http://acs.amazonaws.com/groups/global/AuthenticatedUsers<>
 //
 // To enable logging, you use LoggingEnabled and its children request elements. To
-// disable logging, you use an empty BucketLoggingStatus request element: For more
-// information about server access logging, see Server Access Logging (https://docs.aws.amazon.com/AmazonS3/latest/userguide/ServerLogs.html)
+// disable logging, you use an empty BucketLoggingStatus request element:  For
+// more information about server access logging, see Server Access Logging (https://docs.aws.amazon.com/AmazonS3/latest/userguide/ServerLogs.html)
 // in the Amazon S3 User Guide. For more information about creating a bucket, see
 // CreateBucket (https://docs.aws.amazon.com/AmazonS3/latest/API/API_CreateBucket.html)
 // . For more information about returning the logging status of a bucket, see
@@ -96,6 +97,11 @@ type PutBucketLoggingInput struct {
 	noSmithyDocumentSerde
 }
 
+func (in *PutBucketLoggingInput) bindEndpointParams(p *EndpointParameters) {
+	p.Bucket = in.Bucket
+
+}
+
 type PutBucketLoggingOutput struct {
 	// Metadata pertaining to the operation's result.
 	ResultMetadata middleware.Metadata
@@ -104,12 +110,22 @@ type PutBucketLoggingOutput struct {
 }
 
 func (c *Client) addOperationPutBucketLoggingMiddlewares(stack *middleware.Stack, options Options) (err error) {
+	if err := stack.Serialize.Add(&setOperationInputMiddleware{}, middleware.After); err != nil {
+		return err
+	}
 	err = stack.Serialize.Add(&awsRestxml_serializeOpPutBucketLogging{}, middleware.After)
 	if err != nil {
 		return err
 	}
 	err = stack.Deserialize.Add(&awsRestxml_deserializeOpPutBucketLogging{}, middleware.After)
 	if err != nil {
+		return err
+	}
+	if err := addProtocolFinalizerMiddlewares(stack, options, "PutBucketLogging"); err != nil {
+		return fmt.Errorf("add protocol finalizers: %v", err)
+	}
+
+	if err = addlegacyEndpointContextSetter(stack, options); err != nil {
 		return err
 	}
 	if err = addSetLoggerMiddleware(stack, options); err != nil {
@@ -130,16 +146,13 @@ func (c *Client) addOperationPutBucketLoggingMiddlewares(stack *middleware.Stack
 	if err = addRetryMiddlewares(stack, options); err != nil {
 		return err
 	}
-	if err = addHTTPSignerV4Middleware(stack, options); err != nil {
-		return err
-	}
 	if err = awsmiddleware.AddRawResponseToMetadata(stack); err != nil {
 		return err
 	}
 	if err = awsmiddleware.AddRecordResponseTiming(stack); err != nil {
 		return err
 	}
-	if err = addClientUserAgent(stack); err != nil {
+	if err = addClientUserAgent(stack, options); err != nil {
 		return err
 	}
 	if err = smithyhttp.AddErrorCloseResponseBodyMiddleware(stack); err != nil {
@@ -148,7 +161,7 @@ func (c *Client) addOperationPutBucketLoggingMiddlewares(stack *middleware.Stack
 	if err = smithyhttp.AddCloseResponseBodyMiddleware(stack); err != nil {
 		return err
 	}
-	if err = swapWithCustomHTTPSignerMiddleware(stack, options); err != nil {
+	if err = addSetLegacyContextSigningOptionsMiddleware(stack); err != nil {
 		return err
 	}
 	if err = addOpPutBucketLoggingValidationMiddleware(stack); err != nil {
@@ -181,14 +194,26 @@ func (c *Client) addOperationPutBucketLoggingMiddlewares(stack *middleware.Stack
 	if err = addRequestResponseLogging(stack, options); err != nil {
 		return err
 	}
+	if err = addDisableHTTPSMiddleware(stack, options); err != nil {
+		return err
+	}
+	if err = addSerializeImmutableHostnameBucketMiddleware(stack, options); err != nil {
+		return err
+	}
 	return nil
+}
+
+func (v *PutBucketLoggingInput) bucket() (string, bool) {
+	if v.Bucket == nil {
+		return "", false
+	}
+	return *v.Bucket, true
 }
 
 func newServiceMetadataMiddleware_opPutBucketLogging(region string) *awsmiddleware.RegisterServiceMetadata {
 	return &awsmiddleware.RegisterServiceMetadata{
 		Region:        region,
 		ServiceID:     ServiceID,
-		SigningName:   "s3",
 		OperationName: "PutBucketLogging",
 	}
 }
