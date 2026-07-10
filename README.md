@@ -1,3 +1,5 @@
+**This repository has been archived, and no additional maintenance, development, bug fixes, or security fixes should be expected. No issues or pull requests will be addressed on this repository going forward. This repository remains visible for historical reference, but we do not support or recommend usage of the contents of this repository. If you fork this repository, please be mindful to respect the licensing and copyright attribution of its contents, as archiving the repository does not change the ownership or permissions of the contents.**
+
 [![Validation](https://github.com/awslabs/aws-virtual-kubelet/actions/workflows/validation.yaml/badge.svg)](https://github.com/awslabs/aws-virtual-kubelet/actions/workflows/validation.yaml)  ![Coverage Badge](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/dims/2f400d09b8deb931da6f1d498aba8c07/raw/main.json)
 
 # AWS Virtual Kubelet
