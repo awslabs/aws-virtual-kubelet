@@ -11,32 +11,20 @@ import (
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
-// Describes attributes of your AWS account. The following are the supported
-// account attributes:
-//
-// * supported-platforms: Indicates whether your account can
-// launch instances into EC2-Classic and EC2-VPC, or only into EC2-VPC.
-//
-// *
-// default-vpc: The ID of the default VPC for your account, or none.
-//
-// *
-// max-instances: This attribute is no longer supported. The returned value does
-// not reflect your actual vCPU limit for running On-Demand Instances. For more
-// information, see On-Demand Instance Limits
-// (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-on-demand-instances.html#ec2-on-demand-instances-limits)
-// in the Amazon Elastic Compute Cloud User Guide.
-//
-// *
-// vpc-max-security-groups-per-interface: The maximum number of security groups
-// that you can assign to a network interface.
-//
-// * max-elastic-ips: The maximum
-// number of Elastic IP addresses that you can allocate for use with
-// EC2-Classic.
-//
-// * vpc-max-elastic-ips: The maximum number of Elastic IP addresses
-// that you can allocate for use with EC2-VPC.
+// Describes attributes of your Amazon Web Services account. The following are the
+// supported account attributes:
+//   - default-vpc : The ID of the default VPC for your account, or none .
+//   - max-instances : This attribute is no longer supported. The returned value
+//     does not reflect your actual vCPU limit for running On-Demand Instances. For
+//     more information, see On-Demand Instance Limits (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-on-demand-instances.html#ec2-on-demand-instances-limits)
+//     in the Amazon Elastic Compute Cloud User Guide.
+//   - max-elastic-ips : The maximum number of Elastic IP addresses that you can
+//     allocate.
+//   - supported-platforms : This attribute is deprecated.
+//   - vpc-max-elastic-ips : The maximum number of Elastic IP addresses that you
+//     can allocate.
+//   - vpc-max-security-groups-per-interface : The maximum number of security
+//     groups that you can assign to a network interface.
 func (c *Client) DescribeAccountAttributes(ctx context.Context, params *DescribeAccountAttributesInput, optFns ...func(*Options)) (*DescribeAccountAttributesOutput, error) {
 	if params == nil {
 		params = &DescribeAccountAttributesInput{}
@@ -59,8 +47,8 @@ type DescribeAccountAttributesInput struct {
 
 	// Checks whether you have the required permissions for the action, without
 	// actually making the request, and provides an error response. If you have the
-	// required permissions, the error response is DryRunOperation. Otherwise, it is
-	// UnauthorizedOperation.
+	// required permissions, the error response is DryRunOperation . Otherwise, it is
+	// UnauthorizedOperation .
 	DryRun *bool
 
 	noSmithyDocumentSerde
@@ -113,7 +101,7 @@ func (c *Client) addOperationDescribeAccountAttributesMiddlewares(stack *middlew
 	if err = awsmiddleware.AddRecordResponseTiming(stack); err != nil {
 		return err
 	}
-	if err = addClientUserAgent(stack); err != nil {
+	if err = addClientUserAgent(stack, options); err != nil {
 		return err
 	}
 	if err = smithyhttp.AddErrorCloseResponseBodyMiddleware(stack); err != nil {
@@ -123,6 +111,9 @@ func (c *Client) addOperationDescribeAccountAttributesMiddlewares(stack *middlew
 		return err
 	}
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opDescribeAccountAttributes(options.Region), middleware.Before); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {

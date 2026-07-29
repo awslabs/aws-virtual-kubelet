@@ -10,25 +10,20 @@ import (
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
-// Creates a route in a route table within a VPC. You must specify one of the
-// following targets: internet gateway or virtual private gateway, NAT instance,
-// NAT gateway, VPC peering connection, network interface, egress-only internet
-// gateway, or transit gateway. When determining how to route traffic, we use the
-// route with the most specific match. For example, traffic is destined for the
-// IPv4 address 192.0.2.3, and the route table includes the following two IPv4
+// Creates a route in a route table within a VPC. You must specify either a
+// destination CIDR block or a prefix list ID. You must also specify exactly one of
+// the resources from the parameter list. When determining how to route traffic, we
+// use the route with the most specific match. For example, traffic is destined for
+// the IPv4 address 192.0.2.3 , and the route table includes the following two IPv4
 // routes:
+//   - 192.0.2.0/24 (goes to some target A)
+//   - 192.0.2.0/28 (goes to some target B)
 //
-// * 192.0.2.0/24 (goes to some target A)
-//
-// * 192.0.2.0/28 (goes to some
-// target B)
-//
-// Both routes apply to the traffic destined for 192.0.2.3. However, the
-// second route in the list covers a smaller number of IP addresses and is
-// therefore more specific, so we use that route to determine where to target the
-// traffic. For more information about route tables, see Route tables
-// (https://docs.aws.amazon.com/vpc/latest/userguide/VPC_Route_Tables.html) in the
-// Amazon Virtual Private Cloud User Guide.
+// Both routes apply to the traffic destined for 192.0.2.3 . However, the second
+// route in the list covers a smaller number of IP addresses and is therefore more
+// specific, so we use that route to determine where to target the traffic. For
+// more information about route tables, see Route tables (https://docs.aws.amazon.com/vpc/latest/userguide/VPC_Route_Tables.html)
+// in the Amazon VPC User Guide.
 func (c *Client) CreateRoute(ctx context.Context, params *CreateRouteInput, optFns ...func(*Options)) (*CreateRouteOutput, error) {
 	if params == nil {
 		params = &CreateRouteInput{}
@@ -55,10 +50,13 @@ type CreateRouteInput struct {
 	// contains a subnet which is associated with a Wavelength Zone.
 	CarrierGatewayId *string
 
+	// The Amazon Resource Name (ARN) of the core network.
+	CoreNetworkArn *string
+
 	// The IPv4 CIDR address block used for the destination match. Routing decisions
 	// are based on the most specific match. We modify the specified CIDR block to its
-	// canonical form; for example, if you specify 100.68.0.18/18, we modify it to
-	// 100.68.0.0/18.
+	// canonical form; for example, if you specify 100.68.0.18/18 , we modify it to
+	// 100.68.0.0/18 .
 	DestinationCidrBlock *string
 
 	// The IPv6 CIDR block used for the destination match. Routing decisions are based
@@ -70,8 +68,8 @@ type CreateRouteInput struct {
 
 	// Checks whether you have the required permissions for the action, without
 	// actually making the request, and provides an error response. If you have the
-	// required permissions, the error response is DryRunOperation. Otherwise, it is
-	// UnauthorizedOperation.
+	// required permissions, the error response is DryRunOperation . Otherwise, it is
+	// UnauthorizedOperation .
 	DryRun *bool
 
 	// [IPv6 traffic only] The ID of an egress-only internet gateway.
@@ -152,7 +150,7 @@ func (c *Client) addOperationCreateRouteMiddlewares(stack *middleware.Stack, opt
 	if err = awsmiddleware.AddRecordResponseTiming(stack); err != nil {
 		return err
 	}
-	if err = addClientUserAgent(stack); err != nil {
+	if err = addClientUserAgent(stack, options); err != nil {
 		return err
 	}
 	if err = smithyhttp.AddErrorCloseResponseBodyMiddleware(stack); err != nil {
@@ -165,6 +163,9 @@ func (c *Client) addOperationCreateRouteMiddlewares(stack *middleware.Stack, opt
 		return err
 	}
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opCreateRoute(options.Region), middleware.Before); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {

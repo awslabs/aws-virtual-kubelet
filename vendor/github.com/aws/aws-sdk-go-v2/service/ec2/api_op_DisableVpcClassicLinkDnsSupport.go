@@ -10,12 +10,10 @@ import (
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
-// Disables ClassicLink DNS support for a VPC. If disabled, DNS hostnames resolve
-// to public IP addresses when addressed between a linked EC2-Classic instance and
-// instances in the VPC to which it's linked. For more information, see ClassicLink
-// (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/vpc-classiclink.html) in
-// the Amazon Elastic Compute Cloud User Guide. You must specify a VPC ID in the
-// request.
+// This action is deprecated. Disables ClassicLink DNS support for a VPC. If
+// disabled, DNS hostnames resolve to public IP addresses when addressed between a
+// linked EC2-Classic instance and instances in the VPC to which it's linked. You
+// must specify a VPC ID in the request.
 func (c *Client) DisableVpcClassicLinkDnsSupport(ctx context.Context, params *DisableVpcClassicLinkDnsSupportInput, optFns ...func(*Options)) (*DisableVpcClassicLinkDnsSupportOutput, error) {
 	if params == nil {
 		params = &DisableVpcClassicLinkDnsSupportInput{}
@@ -86,7 +84,7 @@ func (c *Client) addOperationDisableVpcClassicLinkDnsSupportMiddlewares(stack *m
 	if err = awsmiddleware.AddRecordResponseTiming(stack); err != nil {
 		return err
 	}
-	if err = addClientUserAgent(stack); err != nil {
+	if err = addClientUserAgent(stack, options); err != nil {
 		return err
 	}
 	if err = smithyhttp.AddErrorCloseResponseBodyMiddleware(stack); err != nil {
@@ -96,6 +94,9 @@ func (c *Client) addOperationDisableVpcClassicLinkDnsSupportMiddlewares(stack *m
 		return err
 	}
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opDisableVpcClassicLinkDnsSupport(options.Region), middleware.Before); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {

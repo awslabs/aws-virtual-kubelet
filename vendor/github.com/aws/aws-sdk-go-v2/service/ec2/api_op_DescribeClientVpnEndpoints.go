@@ -35,17 +35,13 @@ type DescribeClientVpnEndpointsInput struct {
 
 	// Checks whether you have the required permissions for the action, without
 	// actually making the request, and provides an error response. If you have the
-	// required permissions, the error response is DryRunOperation. Otherwise, it is
-	// UnauthorizedOperation.
+	// required permissions, the error response is DryRunOperation . Otherwise, it is
+	// UnauthorizedOperation .
 	DryRun *bool
 
 	// One or more filters. Filter names and values are case-sensitive.
-	//
-	// * endpoint-id
-	// - The ID of the Client VPN endpoint.
-	//
-	// * transport-protocol - The transport
-	// protocol (tcp | udp).
+	//   - endpoint-id - The ID of the Client VPN endpoint.
+	//   - transport-protocol - The transport protocol ( tcp | udp ).
 	Filters []types.Filter
 
 	// The maximum number of results to return for the request in a single page. The
@@ -110,7 +106,7 @@ func (c *Client) addOperationDescribeClientVpnEndpointsMiddlewares(stack *middle
 	if err = awsmiddleware.AddRecordResponseTiming(stack); err != nil {
 		return err
 	}
-	if err = addClientUserAgent(stack); err != nil {
+	if err = addClientUserAgent(stack, options); err != nil {
 		return err
 	}
 	if err = smithyhttp.AddErrorCloseResponseBodyMiddleware(stack); err != nil {
@@ -120,6 +116,9 @@ func (c *Client) addOperationDescribeClientVpnEndpointsMiddlewares(stack *middle
 		return err
 	}
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opDescribeClientVpnEndpoints(options.Region), middleware.Before); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {
@@ -186,12 +185,13 @@ func NewDescribeClientVpnEndpointsPaginator(client DescribeClientVpnEndpointsAPI
 		client:    client,
 		params:    params,
 		firstPage: true,
+		nextToken: params.NextToken,
 	}
 }
 
 // HasMorePages returns a boolean indicating whether more pages are available
 func (p *DescribeClientVpnEndpointsPaginator) HasMorePages() bool {
-	return p.firstPage || p.nextToken != nil
+	return p.firstPage || (p.nextToken != nil && len(*p.nextToken) != 0)
 }
 
 // NextPage retrieves the next DescribeClientVpnEndpoints page.
@@ -218,7 +218,10 @@ func (p *DescribeClientVpnEndpointsPaginator) NextPage(ctx context.Context, optF
 	prevToken := p.nextToken
 	p.nextToken = result.NextToken
 
-	if p.options.StopOnDuplicateToken && prevToken != nil && p.nextToken != nil && *prevToken == *p.nextToken {
+	if p.options.StopOnDuplicateToken &&
+		prevToken != nil &&
+		p.nextToken != nil &&
+		*prevToken == *p.nextToken {
 		p.nextToken = nil
 	}
 

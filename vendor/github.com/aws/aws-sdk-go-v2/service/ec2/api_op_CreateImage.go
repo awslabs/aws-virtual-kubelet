@@ -13,12 +13,11 @@ import (
 
 // Creates an Amazon EBS-backed AMI from an Amazon EBS-backed instance that is
 // either running or stopped. If you customized your instance with instance store
-// volumes or EBS volumes in addition to the root device volume, the new AMI
+// volumes or Amazon EBS volumes in addition to the root device volume, the new AMI
 // contains block device mapping information for those volumes. When you launch an
 // instance from this new AMI, the instance automatically launches with those
-// additional volumes. For more information, see Creating Amazon EBS-Backed Linux
-// AMIs
-// (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/creating-an-ami-ebs.html)
+// additional volumes. For more information, see Create an Amazon EBS-backed Linux
+// AMI (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/creating-an-ami-ebs.html)
 // in the Amazon Elastic Compute Cloud User Guide.
 func (c *Client) CreateImage(ctx context.Context, params *CreateImageInput, optFns ...func(*Options)) (*CreateImageOutput, error) {
 	if params == nil {
@@ -59,30 +58,33 @@ type CreateImageInput struct {
 
 	// Checks whether you have the required permissions for the action, without
 	// actually making the request, and provides an error response. If you have the
-	// required permissions, the error response is DryRunOperation. Otherwise, it is
-	// UnauthorizedOperation.
+	// required permissions, the error response is DryRunOperation . Otherwise, it is
+	// UnauthorizedOperation .
 	DryRun *bool
 
-	// By default, Amazon EC2 attempts to shut down and reboot the instance before
-	// creating the image. If the No Reboot option is set, Amazon EC2 doesn't shut down
-	// the instance before creating the image. When this option is used, file system
-	// integrity on the created image can't be guaranteed.
+	// Indicates whether or not the instance should be automatically rebooted before
+	// creating the image. Specify one of the following values:
+	//   - true - The instance is not rebooted before creating the image. This creates
+	//   crash-consistent snapshots that include only the data that has been written to
+	//   the volumes at the time the snapshots are created. Buffered data and data in
+	//   memory that has not yet been written to the volumes is not included in the
+	//   snapshots.
+	//   - false - The instance is rebooted before creating the image. This ensures
+	//   that all buffered data and data in memory is written to the volumes before the
+	//   snapshots are created.
+	// Default: false
 	NoReboot *bool
 
-	// The tags to apply to the AMI and snapshots on creation. You can tag the AMI, the
-	// snapshots, or both.
-	//
-	// * To tag the AMI, the value for ResourceType must be
-	// image.
-	//
-	// * To tag the snapshots that are created of the root volume and of other
-	// EBS volumes that are attached to the instance, the value for ResourceType must
-	// be snapshot. The same tag is applied to all of the snapshots that are
-	// created.
-	//
-	// If you specify other values for ResourceType, the request fails. To
-	// tag an AMI or snapshot after it has been created, see CreateTags
-	// (https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_CreateTags.html).
+	// The tags to apply to the AMI and snapshots on creation. You can tag the AMI,
+	// the snapshots, or both.
+	//   - To tag the AMI, the value for ResourceType must be image .
+	//   - To tag the snapshots that are created of the root volume and of other
+	//   Amazon EBS volumes that are attached to the instance, the value for
+	//   ResourceType must be snapshot . The same tag is applied to all of the
+	//   snapshots that are created.
+	// If you specify other values for ResourceType , the request fails. To tag an AMI
+	// or snapshot after it has been created, see CreateTags (https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_CreateTags.html)
+	// .
 	TagSpecifications []types.TagSpecification
 
 	noSmithyDocumentSerde
@@ -135,7 +137,7 @@ func (c *Client) addOperationCreateImageMiddlewares(stack *middleware.Stack, opt
 	if err = awsmiddleware.AddRecordResponseTiming(stack); err != nil {
 		return err
 	}
-	if err = addClientUserAgent(stack); err != nil {
+	if err = addClientUserAgent(stack, options); err != nil {
 		return err
 	}
 	if err = smithyhttp.AddErrorCloseResponseBodyMiddleware(stack); err != nil {
@@ -148,6 +150,9 @@ func (c *Client) addOperationCreateImageMiddlewares(stack *middleware.Stack, opt
 		return err
 	}
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opCreateImage(options.Region), middleware.Before); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {

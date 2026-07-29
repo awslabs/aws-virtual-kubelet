@@ -15,9 +15,6 @@ import (
 // and you can specify whether acceptance is required for requests to connect to
 // your endpoint service through an interface VPC endpoint. If you set or modify
 // the private DNS name, you must prove that you own the private DNS domain name.
-// For more information, see VPC Endpoint Service Private DNS Name Verification
-// (https://docs.aws.amazon.com/vpc/latest/userguide/endpoint-services-dns-validation.html)
-// in the Amazon Virtual Private Cloud User Guide.
 func (c *Client) ModifyVpcEndpointServiceConfiguration(ctx context.Context, params *ModifyVpcEndpointServiceConfigurationInput, optFns ...func(*Options)) (*ModifyVpcEndpointServiceConfigurationOutput, error) {
 	if params == nil {
 		params = &ModifyVpcEndpointServiceConfigurationInput{}
@@ -52,10 +49,13 @@ type ModifyVpcEndpointServiceConfigurationInput struct {
 	// service configuration.
 	AddNetworkLoadBalancerArns []string
 
+	// The IP address types to add to your service configuration.
+	AddSupportedIpAddressTypes []string
+
 	// Checks whether you have the required permissions for the action, without
 	// actually making the request, and provides an error response. If you have the
-	// required permissions, the error response is DryRunOperation. Otherwise, it is
-	// UnauthorizedOperation.
+	// required permissions, the error response is DryRunOperation . Otherwise, it is
+	// UnauthorizedOperation .
 	DryRun *bool
 
 	// (Interface endpoint configuration) The private DNS name to assign to the
@@ -73,6 +73,9 @@ type ModifyVpcEndpointServiceConfigurationInput struct {
 	// (Interface endpoint configuration) Removes the private DNS name of the endpoint
 	// service.
 	RemovePrivateDnsName *bool
+
+	// The IP address types to remove from your service configuration.
+	RemoveSupportedIpAddressTypes []string
 
 	noSmithyDocumentSerde
 }
@@ -124,7 +127,7 @@ func (c *Client) addOperationModifyVpcEndpointServiceConfigurationMiddlewares(st
 	if err = awsmiddleware.AddRecordResponseTiming(stack); err != nil {
 		return err
 	}
-	if err = addClientUserAgent(stack); err != nil {
+	if err = addClientUserAgent(stack, options); err != nil {
 		return err
 	}
 	if err = smithyhttp.AddErrorCloseResponseBodyMiddleware(stack); err != nil {
@@ -137,6 +140,9 @@ func (c *Client) addOperationModifyVpcEndpointServiceConfigurationMiddlewares(st
 		return err
 	}
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opModifyVpcEndpointServiceConfiguration(options.Region), middleware.Before); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {

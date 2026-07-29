@@ -10,15 +10,12 @@ import (
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
-// Enables a VPC to support DNS hostname resolution for ClassicLink. If enabled,
-// the DNS hostname of a linked EC2-Classic instance resolves to its private IP
-// address when addressed from an instance in the VPC to which it's linked.
-// Similarly, the DNS hostname of an instance in a VPC resolves to its private IP
-// address when addressed from a linked EC2-Classic instance. For more information,
-// see ClassicLink
-// (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/vpc-classiclink.html) in
-// the Amazon Elastic Compute Cloud User Guide. You must specify a VPC ID in the
-// request.
+// This action is deprecated. Enables a VPC to support DNS hostname resolution for
+// ClassicLink. If enabled, the DNS hostname of a linked EC2-Classic instance
+// resolves to its private IP address when addressed from an instance in the VPC to
+// which it's linked. Similarly, the DNS hostname of an instance in a VPC resolves
+// to its private IP address when addressed from a linked EC2-Classic instance. You
+// must specify a VPC ID in the request.
 func (c *Client) EnableVpcClassicLinkDnsSupport(ctx context.Context, params *EnableVpcClassicLinkDnsSupportInput, optFns ...func(*Options)) (*EnableVpcClassicLinkDnsSupportOutput, error) {
 	if params == nil {
 		params = &EnableVpcClassicLinkDnsSupportInput{}
@@ -89,7 +86,7 @@ func (c *Client) addOperationEnableVpcClassicLinkDnsSupportMiddlewares(stack *mi
 	if err = awsmiddleware.AddRecordResponseTiming(stack); err != nil {
 		return err
 	}
-	if err = addClientUserAgent(stack); err != nil {
+	if err = addClientUserAgent(stack, options); err != nil {
 		return err
 	}
 	if err = smithyhttp.AddErrorCloseResponseBodyMiddleware(stack); err != nil {
@@ -99,6 +96,9 @@ func (c *Client) addOperationEnableVpcClassicLinkDnsSupportMiddlewares(stack *mi
 		return err
 	}
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opEnableVpcClassicLinkDnsSupport(options.Region), middleware.Before); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {

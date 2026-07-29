@@ -17,8 +17,8 @@ import (
 // minimum required duration of 1,200 hours per year. For example, the minimum
 // daily schedule is 4 hours, the minimum weekly schedule is 24 hours, and the
 // minimum monthly schedule is 100 hours. After you find a schedule that meets your
-// needs, call PurchaseScheduledInstances to purchase Scheduled Instances with that
-// schedule.
+// needs, call PurchaseScheduledInstances to purchase Scheduled Instances with
+// that schedule.
 func (c *Client) DescribeScheduledInstanceAvailability(ctx context.Context, params *DescribeScheduledInstanceAvailabilityInput, optFns ...func(*Options)) (*DescribeScheduledInstanceAvailabilityOutput, error) {
 	if params == nil {
 		params = &DescribeScheduledInstanceAvailabilityInput{}
@@ -49,22 +49,14 @@ type DescribeScheduledInstanceAvailabilityInput struct {
 
 	// Checks whether you have the required permissions for the action, without
 	// actually making the request, and provides an error response. If you have the
-	// required permissions, the error response is DryRunOperation. Otherwise, it is
-	// UnauthorizedOperation.
+	// required permissions, the error response is DryRunOperation . Otherwise, it is
+	// UnauthorizedOperation .
 	DryRun *bool
 
 	// The filters.
-	//
-	// * availability-zone - The Availability Zone (for example,
-	// us-west-2a).
-	//
-	// * instance-type - The instance type (for example, c4.large).
-	//
-	// *
-	// network-platform - The network platform (EC2-Classic or EC2-VPC).
-	//
-	// * platform -
-	// The platform (Linux/UNIX or Windows).
+	//   - availability-zone - The Availability Zone (for example, us-west-2a ).
+	//   - instance-type - The instance type (for example, c4.large ).
+	//   - platform - The platform ( Linux/UNIX or Windows ).
 	Filters []types.Filter
 
 	// The maximum number of results to return in a single call. This value can be
@@ -76,9 +68,10 @@ type DescribeScheduledInstanceAvailabilityInput struct {
 	// MinSlotDurationInHours and less than 1,720.
 	MaxSlotDurationInHours *int32
 
-	// The minimum available duration, in hours. The minimum required duration is 1,200
-	// hours per year. For example, the minimum daily schedule is 4 hours, the minimum
-	// weekly schedule is 24 hours, and the minimum monthly schedule is 100 hours.
+	// The minimum available duration, in hours. The minimum required duration is
+	// 1,200 hours per year. For example, the minimum daily schedule is 4 hours, the
+	// minimum weekly schedule is 24 hours, and the minimum monthly schedule is 100
+	// hours.
 	MinSlotDurationInHours *int32
 
 	// The token for the next set of results.
@@ -139,7 +132,7 @@ func (c *Client) addOperationDescribeScheduledInstanceAvailabilityMiddlewares(st
 	if err = awsmiddleware.AddRecordResponseTiming(stack); err != nil {
 		return err
 	}
-	if err = addClientUserAgent(stack); err != nil {
+	if err = addClientUserAgent(stack, options); err != nil {
 		return err
 	}
 	if err = smithyhttp.AddErrorCloseResponseBodyMiddleware(stack); err != nil {
@@ -152,6 +145,9 @@ func (c *Client) addOperationDescribeScheduledInstanceAvailabilityMiddlewares(st
 		return err
 	}
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opDescribeScheduledInstanceAvailability(options.Region), middleware.Before); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {
@@ -218,12 +214,13 @@ func NewDescribeScheduledInstanceAvailabilityPaginator(client DescribeScheduledI
 		client:    client,
 		params:    params,
 		firstPage: true,
+		nextToken: params.NextToken,
 	}
 }
 
 // HasMorePages returns a boolean indicating whether more pages are available
 func (p *DescribeScheduledInstanceAvailabilityPaginator) HasMorePages() bool {
-	return p.firstPage || p.nextToken != nil
+	return p.firstPage || (p.nextToken != nil && len(*p.nextToken) != 0)
 }
 
 // NextPage retrieves the next DescribeScheduledInstanceAvailability page.
@@ -250,7 +247,10 @@ func (p *DescribeScheduledInstanceAvailabilityPaginator) NextPage(ctx context.Co
 	prevToken := p.nextToken
 	p.nextToken = result.NextToken
 
-	if p.options.StopOnDuplicateToken && prevToken != nil && p.nextToken != nil && *prevToken == *p.nextToken {
+	if p.options.StopOnDuplicateToken &&
+		prevToken != nil &&
+		p.nextToken != nil &&
+		*prevToken == *p.nextToken {
 		p.nextToken = nil
 	}
 

@@ -26,9 +26,11 @@ import (
 // specify tags for the Spot Fleet request and instances launched by the fleet. You
 // cannot tag other resource types in a Spot Fleet request because only the
 // spot-fleet-request and instance resource types are supported. For more
-// information, see Spot Fleet requests
-// (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-fleet-requests.html)
-// in the Amazon EC2 User Guide for Linux Instances.
+// information, see Spot Fleet requests (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-fleet-requests.html)
+// in the Amazon EC2 User Guide. We strongly discourage using the RequestSpotFleet
+// API because it is a legacy API with no planned investment. For options for
+// requesting Spot Instances, see Which is the best Spot request method to use? (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-best-practices.html#which-spot-request-method-to-use)
+// in the Amazon EC2 User Guide.
 func (c *Client) RequestSpotFleet(ctx context.Context, params *RequestSpotFleetInput, optFns ...func(*Options)) (*RequestSpotFleetOutput, error) {
 	if params == nil {
 		params = &RequestSpotFleetInput{}
@@ -54,8 +56,8 @@ type RequestSpotFleetInput struct {
 
 	// Checks whether you have the required permissions for the action, without
 	// actually making the request, and provides an error response. If you have the
-	// required permissions, the error response is DryRunOperation. Otherwise, it is
-	// UnauthorizedOperation.
+	// required permissions, the error response is DryRunOperation . Otherwise, it is
+	// UnauthorizedOperation .
 	DryRun *bool
 
 	noSmithyDocumentSerde
@@ -109,7 +111,7 @@ func (c *Client) addOperationRequestSpotFleetMiddlewares(stack *middleware.Stack
 	if err = awsmiddleware.AddRecordResponseTiming(stack); err != nil {
 		return err
 	}
-	if err = addClientUserAgent(stack); err != nil {
+	if err = addClientUserAgent(stack, options); err != nil {
 		return err
 	}
 	if err = smithyhttp.AddErrorCloseResponseBodyMiddleware(stack); err != nil {
@@ -122,6 +124,9 @@ func (c *Client) addOperationRequestSpotFleetMiddlewares(stack *middleware.Stack
 		return err
 	}
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opRequestSpotFleet(options.Region), middleware.Before); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {

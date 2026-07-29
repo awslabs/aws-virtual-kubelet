@@ -32,23 +32,28 @@ type DescribeNetworkInsightsPathsInput struct {
 
 	// Checks whether you have the required permissions for the action, without
 	// actually making the request, and provides an error response. If you have the
-	// required permissions, the error response is DryRunOperation. Otherwise, it is
-	// UnauthorizedOperation.
+	// required permissions, the error response is DryRunOperation . Otherwise, it is
+	// UnauthorizedOperation .
 	DryRun *bool
 
-	// The filters. The following are possible values:
-	//
-	// * Destination - The ID of the
-	// resource.
-	//
-	// * DestinationPort - The destination port.
-	//
-	// * Name - The path name.
-	//
-	// *
-	// Protocol - The protocol.
-	//
-	// * Source - The ID of the resource.
+	// The filters. The following are the possible values:
+	//   - destination - The ID of the resource.
+	//   - filter-at-source.source-address - The source IPv4 address at the source.
+	//   - filter-at-source.source-port-range - The source port range at the source.
+	//   - filter-at-source.destination-address - The destination IPv4 address at the
+	//   source.
+	//   - filter-at-source.destination-port-range - The destination port range at the
+	//   source.
+	//   - filter-at-destination.source-address - The source IPv4 address at the
+	//   destination.
+	//   - filter-at-destination.source-port-range - The source port range at the
+	//   destination.
+	//   - filter-at-destination.destination-address - The destination IPv4 address at
+	//   the destination.
+	//   - filter-at-destination.destination-port-range - The destination port range
+	//   at the destination.
+	//   - protocol - The protocol.
+	//   - source - The ID of the resource.
 	Filters []types.Filter
 
 	// The maximum number of results to return with a single call. To retrieve the
@@ -115,7 +120,7 @@ func (c *Client) addOperationDescribeNetworkInsightsPathsMiddlewares(stack *midd
 	if err = awsmiddleware.AddRecordResponseTiming(stack); err != nil {
 		return err
 	}
-	if err = addClientUserAgent(stack); err != nil {
+	if err = addClientUserAgent(stack, options); err != nil {
 		return err
 	}
 	if err = smithyhttp.AddErrorCloseResponseBodyMiddleware(stack); err != nil {
@@ -125,6 +130,9 @@ func (c *Client) addOperationDescribeNetworkInsightsPathsMiddlewares(stack *midd
 		return err
 	}
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opDescribeNetworkInsightsPaths(options.Region), middleware.Before); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {
@@ -190,12 +198,13 @@ func NewDescribeNetworkInsightsPathsPaginator(client DescribeNetworkInsightsPath
 		client:    client,
 		params:    params,
 		firstPage: true,
+		nextToken: params.NextToken,
 	}
 }
 
 // HasMorePages returns a boolean indicating whether more pages are available
 func (p *DescribeNetworkInsightsPathsPaginator) HasMorePages() bool {
-	return p.firstPage || p.nextToken != nil
+	return p.firstPage || (p.nextToken != nil && len(*p.nextToken) != 0)
 }
 
 // NextPage retrieves the next DescribeNetworkInsightsPaths page.
@@ -222,7 +231,10 @@ func (p *DescribeNetworkInsightsPathsPaginator) NextPage(ctx context.Context, op
 	prevToken := p.nextToken
 	p.nextToken = result.NextToken
 
-	if p.options.StopOnDuplicateToken && prevToken != nil && p.nextToken != nil && *prevToken == *p.nextToken {
+	if p.options.StopOnDuplicateToken &&
+		prevToken != nil &&
+		p.nextToken != nil &&
+		*prevToken == *p.nextToken {
 		p.nextToken = nil
 	}
 

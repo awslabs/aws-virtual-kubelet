@@ -38,73 +38,52 @@ type DescribeVpcsInput struct {
 
 	// Checks whether you have the required permissions for the action, without
 	// actually making the request, and provides an error response. If you have the
-	// required permissions, the error response is DryRunOperation. Otherwise, it is
-	// UnauthorizedOperation.
+	// required permissions, the error response is DryRunOperation . Otherwise, it is
+	// UnauthorizedOperation .
 	DryRun *bool
 
-	// One or more filters.
-	//
-	// * cidr - The primary IPv4 CIDR block of the VPC. The CIDR
-	// block you specify must exactly match the VPC's CIDR block for information to be
-	// returned for the VPC. Must contain the slash followed by one or two digits (for
-	// example, /28).
-	//
-	// * cidr-block-association.cidr-block - An IPv4 CIDR block
-	// associated with the VPC.
-	//
-	// * cidr-block-association.association-id - The
-	// association ID for an IPv4 CIDR block associated with the VPC.
-	//
-	// *
-	// cidr-block-association.state - The state of an IPv4 CIDR block associated with
-	// the VPC.
-	//
-	// * dhcp-options-id - The ID of a set of DHCP options.
-	//
-	// *
-	// ipv6-cidr-block-association.ipv6-cidr-block - An IPv6 CIDR block associated with
-	// the VPC.
-	//
-	// * ipv6-cidr-block-association.ipv6-pool - The ID of the IPv6 address
-	// pool from which the IPv6 CIDR block is allocated.
-	//
-	// *
-	// ipv6-cidr-block-association.association-id - The association ID for an IPv6 CIDR
-	// block associated with the VPC.
-	//
-	// * ipv6-cidr-block-association.state - The state
-	// of an IPv6 CIDR block associated with the VPC.
-	//
-	// * is-default - Indicates whether
-	// the VPC is the default VPC.
-	//
-	// * owner-id - The ID of the Amazon Web Services
-	// account that owns the VPC.
-	//
-	// * state - The state of the VPC (pending |
-	// available).
-	//
-	// * tag: - The key/value combination of a tag assigned to the
-	// resource. Use the tag key in the filter name and the tag value as the filter
-	// value. For example, to find all resources that have a tag with the key Owner and
-	// the value TeamA, specify tag:Owner for the filter name and TeamA for the filter
-	// value.
-	//
-	// * tag-key - The key of a tag assigned to the resource. Use this filter
-	// to find all resources assigned a tag with a specific key, regardless of the tag
-	// value.
-	//
-	// * vpc-id - The ID of the VPC.
+	// The filters.
+	//   - cidr - The primary IPv4 CIDR block of the VPC. The CIDR block you specify
+	//   must exactly match the VPC's CIDR block for information to be returned for the
+	//   VPC. Must contain the slash followed by one or two digits (for example, /28 ).
+	//   - cidr-block-association.cidr-block - An IPv4 CIDR block associated with the
+	//   VPC.
+	//   - cidr-block-association.association-id - The association ID for an IPv4 CIDR
+	//   block associated with the VPC.
+	//   - cidr-block-association.state - The state of an IPv4 CIDR block associated
+	//   with the VPC.
+	//   - dhcp-options-id - The ID of a set of DHCP options.
+	//   - ipv6-cidr-block-association.ipv6-cidr-block - An IPv6 CIDR block associated
+	//   with the VPC.
+	//   - ipv6-cidr-block-association.ipv6-pool - The ID of the IPv6 address pool from
+	//   which the IPv6 CIDR block is allocated.
+	//   - ipv6-cidr-block-association.association-id - The association ID for an IPv6
+	//   CIDR block associated with the VPC.
+	//   - ipv6-cidr-block-association.state - The state of an IPv6 CIDR block
+	//   associated with the VPC.
+	//   - is-default - Indicates whether the VPC is the default VPC.
+	//   - owner-id - The ID of the Amazon Web Services account that owns the VPC.
+	//   - state - The state of the VPC ( pending | available ).
+	//   - tag : - The key/value combination of a tag assigned to the resource. Use the
+	//   tag key in the filter name and the tag value as the filter value. For example,
+	//   to find all resources that have a tag with the key Owner and the value TeamA ,
+	//   specify tag:Owner for the filter name and TeamA for the filter value.
+	//   - tag-key - The key of a tag assigned to the resource. Use this filter to find
+	//   all resources assigned a tag with a specific key, regardless of the tag value.
+	//   - vpc-id - The ID of the VPC.
 	Filters []types.Filter
 
-	// The maximum number of results to return with a single call. To retrieve the
-	// remaining results, make another call with the returned nextToken value.
+	// The maximum number of items to return for this request. To get the next page of
+	// items, make another request with the token returned in the output. For more
+	// information, see Pagination (https://docs.aws.amazon.com/AWSEC2/latest/APIReference/Query-Requests.html#api-pagination)
+	// .
 	MaxResults *int32
 
-	// The token for the next page of results.
+	// The token returned from a previous paginated request. Pagination continues from
+	// the end of the items returned by the previous request.
 	NextToken *string
 
-	// One or more VPC IDs. Default: Describes all your VPCs.
+	// The IDs of the VPCs. Default: Describes all your VPCs.
 	VpcIds []string
 
 	noSmithyDocumentSerde
@@ -112,8 +91,8 @@ type DescribeVpcsInput struct {
 
 type DescribeVpcsOutput struct {
 
-	// The token to use to retrieve the next page of results. This value is null when
-	// there are no more results to return.
+	// The token to include in another request to get the next page of items. This
+	// value is null when there are no more items to return.
 	NextToken *string
 
 	// Information about one or more VPCs.
@@ -161,7 +140,7 @@ func (c *Client) addOperationDescribeVpcsMiddlewares(stack *middleware.Stack, op
 	if err = awsmiddleware.AddRecordResponseTiming(stack); err != nil {
 		return err
 	}
-	if err = addClientUserAgent(stack); err != nil {
+	if err = addClientUserAgent(stack, options); err != nil {
 		return err
 	}
 	if err = smithyhttp.AddErrorCloseResponseBodyMiddleware(stack); err != nil {
@@ -171,6 +150,9 @@ func (c *Client) addOperationDescribeVpcsMiddlewares(stack *middleware.Stack, op
 		return err
 	}
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opDescribeVpcs(options.Region), middleware.Before); err != nil {
+		return err
+	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {
@@ -194,8 +176,10 @@ var _ DescribeVpcsAPIClient = (*Client)(nil)
 
 // DescribeVpcsPaginatorOptions is the paginator options for DescribeVpcs
 type DescribeVpcsPaginatorOptions struct {
-	// The maximum number of results to return with a single call. To retrieve the
-	// remaining results, make another call with the returned nextToken value.
+	// The maximum number of items to return for this request. To get the next page of
+	// items, make another request with the token returned in the output. For more
+	// information, see Pagination (https://docs.aws.amazon.com/AWSEC2/latest/APIReference/Query-Requests.html#api-pagination)
+	// .
 	Limit int32
 
 	// Set to true if pagination should stop if the service returns a pagination token
@@ -232,12 +216,13 @@ func NewDescribeVpcsPaginator(client DescribeVpcsAPIClient, params *DescribeVpcs
 		client:    client,
 		params:    params,
 		firstPage: true,
+		nextToken: params.NextToken,
 	}
 }
 
 // HasMorePages returns a boolean indicating whether more pages are available
 func (p *DescribeVpcsPaginator) HasMorePages() bool {
-	return p.firstPage || p.nextToken != nil
+	return p.firstPage || (p.nextToken != nil && len(*p.nextToken) != 0)
 }
 
 // NextPage retrieves the next DescribeVpcs page.
@@ -264,7 +249,10 @@ func (p *DescribeVpcsPaginator) NextPage(ctx context.Context, optFns ...func(*Op
 	prevToken := p.nextToken
 	p.nextToken = result.NextToken
 
-	if p.options.StopOnDuplicateToken && prevToken != nil && p.nextToken != nil && *prevToken == *p.nextToken {
+	if p.options.StopOnDuplicateToken &&
+		prevToken != nil &&
+		p.nextToken != nil &&
+		*prevToken == *p.nextToken {
 		p.nextToken = nil
 	}
 
@@ -284,9 +272,9 @@ type VpcAvailableWaiterOptions struct {
 	// MinDelay must resolve to a value lesser than or equal to the MaxDelay.
 	MinDelay time.Duration
 
-	// MaxDelay is the maximum amount of time to delay between retries. If unset or set
-	// to zero, VpcAvailableWaiter will use default max delay of 120 seconds. Note that
-	// MaxDelay must resolve to value greater than or equal to the MinDelay.
+	// MaxDelay is the maximum amount of time to delay between retries. If unset or
+	// set to zero, VpcAvailableWaiter will use default max delay of 120 seconds. Note
+	// that MaxDelay must resolve to value greater than or equal to the MinDelay.
 	MaxDelay time.Duration
 
 	// LogWaitAttempts is used to enable logging for waiter retry attempts
@@ -330,8 +318,16 @@ func NewVpcAvailableWaiter(client DescribeVpcsAPIClient, optFns ...func(*VpcAvai
 // maximum wait duration the waiter will wait. The maxWaitDur is required and must
 // be greater than zero.
 func (w *VpcAvailableWaiter) Wait(ctx context.Context, params *DescribeVpcsInput, maxWaitDur time.Duration, optFns ...func(*VpcAvailableWaiterOptions)) error {
+	_, err := w.WaitForOutput(ctx, params, maxWaitDur, optFns...)
+	return err
+}
+
+// WaitForOutput calls the waiter function for VpcAvailable waiter and returns the
+// output of the successful operation. The maxWaitDur is the maximum wait duration
+// the waiter will wait. The maxWaitDur is required and must be greater than zero.
+func (w *VpcAvailableWaiter) WaitForOutput(ctx context.Context, params *DescribeVpcsInput, maxWaitDur time.Duration, optFns ...func(*VpcAvailableWaiterOptions)) (*DescribeVpcsOutput, error) {
 	if maxWaitDur <= 0 {
-		return fmt.Errorf("maximum wait time for waiter must be greater than zero")
+		return nil, fmt.Errorf("maximum wait time for waiter must be greater than zero")
 	}
 
 	options := w.options
@@ -344,7 +340,7 @@ func (w *VpcAvailableWaiter) Wait(ctx context.Context, params *DescribeVpcsInput
 	}
 
 	if options.MinDelay > options.MaxDelay {
-		return fmt.Errorf("minimum waiter delay %v must be lesser than or equal to maximum waiter delay of %v.", options.MinDelay, options.MaxDelay)
+		return nil, fmt.Errorf("minimum waiter delay %v must be lesser than or equal to maximum waiter delay of %v.", options.MinDelay, options.MaxDelay)
 	}
 
 	ctx, cancelFn := context.WithTimeout(ctx, maxWaitDur)
@@ -372,10 +368,10 @@ func (w *VpcAvailableWaiter) Wait(ctx context.Context, params *DescribeVpcsInput
 
 		retryable, err := options.Retryable(ctx, params, out, err)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if !retryable {
-			return nil
+			return out, nil
 		}
 
 		remainingTime -= time.Since(start)
@@ -388,16 +384,16 @@ func (w *VpcAvailableWaiter) Wait(ctx context.Context, params *DescribeVpcsInput
 			attempt, options.MinDelay, options.MaxDelay, remainingTime,
 		)
 		if err != nil {
-			return fmt.Errorf("error computing waiter delay, %w", err)
+			return nil, fmt.Errorf("error computing waiter delay, %w", err)
 		}
 
 		remainingTime -= delay
 		// sleep for the delay amount before invoking a request
 		if err := smithytime.SleepWithContext(ctx, delay); err != nil {
-			return fmt.Errorf("request cancelled while waiting, %w", err)
+			return nil, fmt.Errorf("request cancelled while waiting, %w", err)
 		}
 	}
-	return fmt.Errorf("exceeded max wait time for VpcAvailable waiter")
+	return nil, fmt.Errorf("exceeded max wait time for VpcAvailable waiter")
 }
 
 func vpcAvailableStateRetryable(ctx context.Context, input *DescribeVpcsInput, output *DescribeVpcsOutput, err error) (bool, error) {
@@ -450,9 +446,9 @@ type VpcExistsWaiterOptions struct {
 	// must resolve to a value lesser than or equal to the MaxDelay.
 	MinDelay time.Duration
 
-	// MaxDelay is the maximum amount of time to delay between retries. If unset or set
-	// to zero, VpcExistsWaiter will use default max delay of 120 seconds. Note that
-	// MaxDelay must resolve to value greater than or equal to the MinDelay.
+	// MaxDelay is the maximum amount of time to delay between retries. If unset or
+	// set to zero, VpcExistsWaiter will use default max delay of 120 seconds. Note
+	// that MaxDelay must resolve to value greater than or equal to the MinDelay.
 	MaxDelay time.Duration
 
 	// LogWaitAttempts is used to enable logging for waiter retry attempts
@@ -496,8 +492,16 @@ func NewVpcExistsWaiter(client DescribeVpcsAPIClient, optFns ...func(*VpcExistsW
 // maximum wait duration the waiter will wait. The maxWaitDur is required and must
 // be greater than zero.
 func (w *VpcExistsWaiter) Wait(ctx context.Context, params *DescribeVpcsInput, maxWaitDur time.Duration, optFns ...func(*VpcExistsWaiterOptions)) error {
+	_, err := w.WaitForOutput(ctx, params, maxWaitDur, optFns...)
+	return err
+}
+
+// WaitForOutput calls the waiter function for VpcExists waiter and returns the
+// output of the successful operation. The maxWaitDur is the maximum wait duration
+// the waiter will wait. The maxWaitDur is required and must be greater than zero.
+func (w *VpcExistsWaiter) WaitForOutput(ctx context.Context, params *DescribeVpcsInput, maxWaitDur time.Duration, optFns ...func(*VpcExistsWaiterOptions)) (*DescribeVpcsOutput, error) {
 	if maxWaitDur <= 0 {
-		return fmt.Errorf("maximum wait time for waiter must be greater than zero")
+		return nil, fmt.Errorf("maximum wait time for waiter must be greater than zero")
 	}
 
 	options := w.options
@@ -510,7 +514,7 @@ func (w *VpcExistsWaiter) Wait(ctx context.Context, params *DescribeVpcsInput, m
 	}
 
 	if options.MinDelay > options.MaxDelay {
-		return fmt.Errorf("minimum waiter delay %v must be lesser than or equal to maximum waiter delay of %v.", options.MinDelay, options.MaxDelay)
+		return nil, fmt.Errorf("minimum waiter delay %v must be lesser than or equal to maximum waiter delay of %v.", options.MinDelay, options.MaxDelay)
 	}
 
 	ctx, cancelFn := context.WithTimeout(ctx, maxWaitDur)
@@ -538,10 +542,10 @@ func (w *VpcExistsWaiter) Wait(ctx context.Context, params *DescribeVpcsInput, m
 
 		retryable, err := options.Retryable(ctx, params, out, err)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if !retryable {
-			return nil
+			return out, nil
 		}
 
 		remainingTime -= time.Since(start)
@@ -554,16 +558,16 @@ func (w *VpcExistsWaiter) Wait(ctx context.Context, params *DescribeVpcsInput, m
 			attempt, options.MinDelay, options.MaxDelay, remainingTime,
 		)
 		if err != nil {
-			return fmt.Errorf("error computing waiter delay, %w", err)
+			return nil, fmt.Errorf("error computing waiter delay, %w", err)
 		}
 
 		remainingTime -= delay
 		// sleep for the delay amount before invoking a request
 		if err := smithytime.SleepWithContext(ctx, delay); err != nil {
-			return fmt.Errorf("request cancelled while waiting, %w", err)
+			return nil, fmt.Errorf("request cancelled while waiting, %w", err)
 		}
 	}
-	return fmt.Errorf("exceeded max wait time for VpcExists waiter")
+	return nil, fmt.Errorf("exceeded max wait time for VpcExists waiter")
 }
 
 func vpcExistsStateRetryable(ctx context.Context, input *DescribeVpcsInput, output *DescribeVpcsOutput, err error) (bool, error) {
