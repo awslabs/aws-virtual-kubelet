@@ -33,7 +33,7 @@ func main() {
 	log.L = logruslogger.FromLogrus(logrus.NewEntry(logger))
 	logConfig := &logruscli.Config{LogLevel: "info"}
 
-	node, err := cli.New(
+	node, err := cli.New(ctx,
 		cli.WithProvider("demo", func(cfg provider.InitConfig) (provider.Provider, error) {
 			return nil, errors.New("your implementation goes here")
 		}),
