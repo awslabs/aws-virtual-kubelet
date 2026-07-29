@@ -275,8 +275,8 @@ func (c *leaseController) newLease(ctx context.Context, node *corev1.Node, base 
 				Namespace: corev1.NamespaceNodeLease,
 			},
 			Spec: coordinationv1.LeaseSpec{
-				HolderIdentity:       pointer.StringPtr(node.Name),
-				LeaseDurationSeconds: pointer.Int32Ptr(c.leaseDurationSeconds),
+				HolderIdentity:       pointer.String(node.Name),
+				LeaseDurationSeconds: pointer.Int32(c.leaseDurationSeconds),
 			},
 		}
 	} else {
@@ -333,7 +333,7 @@ func (e *nodeNotReadyError) Is(target error) bool {
 	return ok
 }
 
-func (e *nodeNotReadyError) As(target error) bool {
+func (e *nodeNotReadyError) As(target interface{}) bool {
 	val, ok := target.(*nodeNotReadyError)
 	if ok {
 		*val = *e

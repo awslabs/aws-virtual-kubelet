@@ -19,6 +19,7 @@ package apiserver
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	tracingapi "k8s.io/component-base/tracing/api/v1"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -62,7 +63,7 @@ type EgressSelectorConfiguration struct {
 // EgressSelection provides the configuration for a single egress selection client.
 type EgressSelection struct {
 	// Name is the name of the egress selection.
-	// Currently supported values are "Master", "Etcd" and "Cluster"
+	// Currently supported values are "controlplane", "etcd" and "cluster"
 	Name string
 
 	// Connection is the exact information used to configure the egress selection
@@ -145,4 +146,14 @@ type TLSConfig struct {
 	// Must be configured if TCPTransport.URL is prefixed with https://
 	// +optional
 	ClientCert string
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// TracingConfiguration provides versioned configuration for tracing clients.
+type TracingConfiguration struct {
+	metav1.TypeMeta
+
+	// Embed the component config tracing configuration struct
+	tracingapi.TracingConfiguration
 }
