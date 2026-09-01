@@ -4,6 +4,7 @@ package s3
 
 import (
 	"context"
+	"fmt"
 	awsmiddleware "github.com/aws/aws-sdk-go-v2/aws/middleware"
 	"github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	s3cust "github.com/aws/aws-sdk-go-v2/service/s3/internal/customizations"
@@ -103,7 +104,7 @@ type GetObjectAttributesInput struct {
 	// AccessPointName-AccountId.outpostID.s3-outposts.Region.amazonaws.com . When you
 	// use this action with S3 on Outposts through the Amazon Web Services SDKs, you
 	// provide the Outposts access point ARN in place of the bucket name. For more
-	// information about S3 on Outposts ARNs, see What is S3 on Outposts (https://docs.aws.amazon.com/AmazonS3/latest/userguide/S3onOutposts.html)
+	// information about S3 on Outposts ARNs, see What is S3 on Outposts? (https://docs.aws.amazon.com/AmazonS3/latest/userguide/S3onOutposts.html)
 	// in the Amazon S3 User Guide.
 	//
 	// This member is required.
@@ -114,8 +115,8 @@ type GetObjectAttributesInput struct {
 	// This member is required.
 	Key *string
 
-	// An XML header that specifies the fields at the root level that you want
-	// returned in the response. Fields that you do not specify are not returned.
+	// Specifies the fields at the root level that you want returned in the response.
+	// Fields that you do not specify are not returned.
 	//
 	// This member is required.
 	ObjectAttributes []types.ObjectAttributes
@@ -126,16 +127,18 @@ type GetObjectAttributesInput struct {
 	ExpectedBucketOwner *string
 
 	// Sets the maximum number of parts to return.
-	MaxParts int32
+	MaxParts *int32
 
 	// Specifies the part after which listing should begin. Only parts with higher
 	// part numbers will be listed.
 	PartNumberMarker *string
 
 	// Confirms that the requester knows that they will be charged for the request.
-	// Bucket owners need not specify this parameter in their requests. For information
-	// about downloading objects from Requester Pays buckets, see Downloading Objects
-	// in Requester Pays Buckets (https://docs.aws.amazon.com/AmazonS3/latest/dev/ObjectsinRequesterPaysBuckets.html)
+	// Bucket owners need not specify this parameter in their requests. If either the
+	// source or destination Amazon S3 bucket has Requester Pays enabled, the requester
+	// will pay for corresponding charges to copy the object. For information about
+	// downloading objects from Requester Pays buckets, see Downloading Objects in
+	// Requester Pays Buckets (https://docs.aws.amazon.com/AmazonS3/latest/dev/ObjectsinRequesterPaysBuckets.html)
 	// in the Amazon S3 User Guide.
 	RequestPayer types.RequestPayer
 
@@ -160,6 +163,11 @@ type GetObjectAttributesInput struct {
 	noSmithyDocumentSerde
 }
 
+func (in *GetObjectAttributesInput) bindEndpointParams(p *EndpointParameters) {
+	p.Bucket = in.Bucket
+
+}
+
 type GetObjectAttributesOutput struct {
 
 	// The checksum or digest of the object.
@@ -167,7 +175,7 @@ type GetObjectAttributesOutput struct {
 
 	// Specifies whether the object retrieved was ( true ) or was not ( false ) a
 	// delete marker. If false , this response header does not appear in the response.
-	DeleteMarker bool
+	DeleteMarker *bool
 
 	// An ETag is an opaque identifier assigned by a web server to a specific version
 	// of a resource found at a URL.
@@ -180,7 +188,7 @@ type GetObjectAttributesOutput struct {
 	ObjectParts *types.GetObjectAttributesParts
 
 	// The size of the object in bytes.
-	ObjectSize int64
+	ObjectSize *int64
 
 	// If present, indicates that the requester was successfully charged for the
 	// request.
@@ -202,12 +210,22 @@ type GetObjectAttributesOutput struct {
 }
 
 func (c *Client) addOperationGetObjectAttributesMiddlewares(stack *middleware.Stack, options Options) (err error) {
+	if err := stack.Serialize.Add(&setOperationInputMiddleware{}, middleware.After); err != nil {
+		return err
+	}
 	err = stack.Serialize.Add(&awsRestxml_serializeOpGetObjectAttributes{}, middleware.After)
 	if err != nil {
 		return err
 	}
 	err = stack.Deserialize.Add(&awsRestxml_deserializeOpGetObjectAttributes{}, middleware.After)
 	if err != nil {
+		return err
+	}
+	if err := addProtocolFinalizerMiddlewares(stack, options, "GetObjectAttributes"); err != nil {
+		return fmt.Errorf("add protocol finalizers: %v", err)
+	}
+
+	if err = addlegacyEndpointContextSetter(stack, options); err != nil {
 		return err
 	}
 	if err = addSetLoggerMiddleware(stack, options); err != nil {
@@ -228,16 +246,13 @@ func (c *Client) addOperationGetObjectAttributesMiddlewares(stack *middleware.St
 	if err = addRetryMiddlewares(stack, options); err != nil {
 		return err
 	}
-	if err = addHTTPSignerV4Middleware(stack, options); err != nil {
-		return err
-	}
 	if err = awsmiddleware.AddRawResponseToMetadata(stack); err != nil {
 		return err
 	}
 	if err = awsmiddleware.AddRecordResponseTiming(stack); err != nil {
 		return err
 	}
-	if err = addClientUserAgent(stack); err != nil {
+	if err = addClientUserAgent(stack, options); err != nil {
 		return err
 	}
 	if err = smithyhttp.AddErrorCloseResponseBodyMiddleware(stack); err != nil {
@@ -246,7 +261,7 @@ func (c *Client) addOperationGetObjectAttributesMiddlewares(stack *middleware.St
 	if err = smithyhttp.AddCloseResponseBodyMiddleware(stack); err != nil {
 		return err
 	}
-	if err = swapWithCustomHTTPSignerMiddleware(stack, options); err != nil {
+	if err = addSetLegacyContextSigningOptionsMiddleware(stack); err != nil {
 		return err
 	}
 	if err = addOpGetObjectAttributesValidationMiddleware(stack); err != nil {
@@ -276,14 +291,26 @@ func (c *Client) addOperationGetObjectAttributesMiddlewares(stack *middleware.St
 	if err = addRequestResponseLogging(stack, options); err != nil {
 		return err
 	}
+	if err = addDisableHTTPSMiddleware(stack, options); err != nil {
+		return err
+	}
+	if err = addSerializeImmutableHostnameBucketMiddleware(stack, options); err != nil {
+		return err
+	}
 	return nil
+}
+
+func (v *GetObjectAttributesInput) bucket() (string, bool) {
+	if v.Bucket == nil {
+		return "", false
+	}
+	return *v.Bucket, true
 }
 
 func newServiceMetadataMiddleware_opGetObjectAttributes(region string) *awsmiddleware.RegisterServiceMetadata {
 	return &awsmiddleware.RegisterServiceMetadata{
 		Region:        region,
 		ServiceID:     ServiceID,
-		SigningName:   "s3",
 		OperationName: "GetObjectAttributes",
 	}
 }

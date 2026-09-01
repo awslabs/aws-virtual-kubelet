@@ -4,6 +4,7 @@ package s3
 
 import (
 	"context"
+	"fmt"
 	awsmiddleware "github.com/aws/aws-sdk-go-v2/aws/middleware"
 	"github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	s3cust "github.com/aws/aws-sdk-go-v2/service/s3/internal/customizations"
@@ -69,6 +70,11 @@ type ListBucketMetricsConfigurationsInput struct {
 	noSmithyDocumentSerde
 }
 
+func (in *ListBucketMetricsConfigurationsInput) bindEndpointParams(p *EndpointParameters) {
+	p.Bucket = in.Bucket
+
+}
+
 type ListBucketMetricsConfigurationsOutput struct {
 
 	// The marker that is used as a starting point for this metrics configuration list
@@ -78,7 +84,7 @@ type ListBucketMetricsConfigurationsOutput struct {
 	// Indicates whether the returned list of metrics configurations is complete. A
 	// value of true indicates that the list is not complete and the
 	// NextContinuationToken will be provided for a subsequent request.
-	IsTruncated bool
+	IsTruncated *bool
 
 	// The list of metrics configurations for a bucket.
 	MetricsConfigurationList []types.MetricsConfiguration
@@ -96,12 +102,22 @@ type ListBucketMetricsConfigurationsOutput struct {
 }
 
 func (c *Client) addOperationListBucketMetricsConfigurationsMiddlewares(stack *middleware.Stack, options Options) (err error) {
+	if err := stack.Serialize.Add(&setOperationInputMiddleware{}, middleware.After); err != nil {
+		return err
+	}
 	err = stack.Serialize.Add(&awsRestxml_serializeOpListBucketMetricsConfigurations{}, middleware.After)
 	if err != nil {
 		return err
 	}
 	err = stack.Deserialize.Add(&awsRestxml_deserializeOpListBucketMetricsConfigurations{}, middleware.After)
 	if err != nil {
+		return err
+	}
+	if err := addProtocolFinalizerMiddlewares(stack, options, "ListBucketMetricsConfigurations"); err != nil {
+		return fmt.Errorf("add protocol finalizers: %v", err)
+	}
+
+	if err = addlegacyEndpointContextSetter(stack, options); err != nil {
 		return err
 	}
 	if err = addSetLoggerMiddleware(stack, options); err != nil {
@@ -122,16 +138,13 @@ func (c *Client) addOperationListBucketMetricsConfigurationsMiddlewares(stack *m
 	if err = addRetryMiddlewares(stack, options); err != nil {
 		return err
 	}
-	if err = addHTTPSignerV4Middleware(stack, options); err != nil {
-		return err
-	}
 	if err = awsmiddleware.AddRawResponseToMetadata(stack); err != nil {
 		return err
 	}
 	if err = awsmiddleware.AddRecordResponseTiming(stack); err != nil {
 		return err
 	}
-	if err = addClientUserAgent(stack); err != nil {
+	if err = addClientUserAgent(stack, options); err != nil {
 		return err
 	}
 	if err = smithyhttp.AddErrorCloseResponseBodyMiddleware(stack); err != nil {
@@ -140,7 +153,7 @@ func (c *Client) addOperationListBucketMetricsConfigurationsMiddlewares(stack *m
 	if err = smithyhttp.AddCloseResponseBodyMiddleware(stack); err != nil {
 		return err
 	}
-	if err = swapWithCustomHTTPSignerMiddleware(stack, options); err != nil {
+	if err = addSetLegacyContextSigningOptionsMiddleware(stack); err != nil {
 		return err
 	}
 	if err = addOpListBucketMetricsConfigurationsValidationMiddleware(stack); err != nil {
@@ -170,14 +183,26 @@ func (c *Client) addOperationListBucketMetricsConfigurationsMiddlewares(stack *m
 	if err = addRequestResponseLogging(stack, options); err != nil {
 		return err
 	}
+	if err = addDisableHTTPSMiddleware(stack, options); err != nil {
+		return err
+	}
+	if err = addSerializeImmutableHostnameBucketMiddleware(stack, options); err != nil {
+		return err
+	}
 	return nil
+}
+
+func (v *ListBucketMetricsConfigurationsInput) bucket() (string, bool) {
+	if v.Bucket == nil {
+		return "", false
+	}
+	return *v.Bucket, true
 }
 
 func newServiceMetadataMiddleware_opListBucketMetricsConfigurations(region string) *awsmiddleware.RegisterServiceMetadata {
 	return &awsmiddleware.RegisterServiceMetadata{
 		Region:        region,
 		ServiceID:     ServiceID,
-		SigningName:   "s3",
 		OperationName: "ListBucketMetricsConfigurations",
 	}
 }

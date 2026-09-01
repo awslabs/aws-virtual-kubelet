@@ -66,7 +66,7 @@ type ListPartsInput struct {
 	// AccessPointName-AccountId.outpostID.s3-outposts.Region.amazonaws.com . When you
 	// use this action with S3 on Outposts through the Amazon Web Services SDKs, you
 	// provide the Outposts access point ARN in place of the bucket name. For more
-	// information about S3 on Outposts ARNs, see What is S3 on Outposts (https://docs.aws.amazon.com/AmazonS3/latest/userguide/S3onOutposts.html)
+	// information about S3 on Outposts ARNs, see What is S3 on Outposts? (https://docs.aws.amazon.com/AmazonS3/latest/userguide/S3onOutposts.html)
 	// in the Amazon S3 User Guide.
 	//
 	// This member is required.
@@ -88,16 +88,18 @@ type ListPartsInput struct {
 	ExpectedBucketOwner *string
 
 	// Sets the maximum number of parts to return.
-	MaxParts int32
+	MaxParts *int32
 
 	// Specifies the part after which listing should begin. Only parts with higher
 	// part numbers will be listed.
 	PartNumberMarker *string
 
 	// Confirms that the requester knows that they will be charged for the request.
-	// Bucket owners need not specify this parameter in their requests. For information
-	// about downloading objects from Requester Pays buckets, see Downloading Objects
-	// in Requester Pays Buckets (https://docs.aws.amazon.com/AmazonS3/latest/dev/ObjectsinRequesterPaysBuckets.html)
+	// Bucket owners need not specify this parameter in their requests. If either the
+	// source or destination Amazon S3 bucket has Requester Pays enabled, the requester
+	// will pay for corresponding charges to copy the object. For information about
+	// downloading objects from Requester Pays buckets, see Downloading Objects in
+	// Requester Pays Buckets (https://docs.aws.amazon.com/AmazonS3/latest/dev/ObjectsinRequesterPaysBuckets.html)
 	// in the Amazon S3 User Guide.
 	RequestPayer types.RequestPayer
 
@@ -120,6 +122,11 @@ type ListPartsInput struct {
 	SSECustomerKeyMD5 *string
 
 	noSmithyDocumentSerde
+}
+
+func (in *ListPartsInput) bindEndpointParams(p *EndpointParameters) {
+	p.Bucket = in.Bucket
+
 }
 
 type ListPartsOutput struct {
@@ -155,13 +162,13 @@ type ListPartsOutput struct {
 	// Indicates whether the returned list of parts is truncated. A true value
 	// indicates that the list was truncated. A list can be truncated if the number of
 	// parts exceeds the limit returned in the MaxParts element.
-	IsTruncated bool
+	IsTruncated *bool
 
 	// Object key for which the multipart upload was initiated.
 	Key *string
 
 	// Maximum number of parts that were allowed in the response.
-	MaxParts int32
+	MaxParts *int32
 
 	// When a list is truncated, this element specifies the last part in the list, as
 	// well as the value to use for the part-number-marker request parameter in a
@@ -200,12 +207,22 @@ type ListPartsOutput struct {
 }
 
 func (c *Client) addOperationListPartsMiddlewares(stack *middleware.Stack, options Options) (err error) {
+	if err := stack.Serialize.Add(&setOperationInputMiddleware{}, middleware.After); err != nil {
+		return err
+	}
 	err = stack.Serialize.Add(&awsRestxml_serializeOpListParts{}, middleware.After)
 	if err != nil {
 		return err
 	}
 	err = stack.Deserialize.Add(&awsRestxml_deserializeOpListParts{}, middleware.After)
 	if err != nil {
+		return err
+	}
+	if err := addProtocolFinalizerMiddlewares(stack, options, "ListParts"); err != nil {
+		return fmt.Errorf("add protocol finalizers: %v", err)
+	}
+
+	if err = addlegacyEndpointContextSetter(stack, options); err != nil {
 		return err
 	}
 	if err = addSetLoggerMiddleware(stack, options); err != nil {
@@ -226,16 +243,13 @@ func (c *Client) addOperationListPartsMiddlewares(stack *middleware.Stack, optio
 	if err = addRetryMiddlewares(stack, options); err != nil {
 		return err
 	}
-	if err = addHTTPSignerV4Middleware(stack, options); err != nil {
-		return err
-	}
 	if err = awsmiddleware.AddRawResponseToMetadata(stack); err != nil {
 		return err
 	}
 	if err = awsmiddleware.AddRecordResponseTiming(stack); err != nil {
 		return err
 	}
-	if err = addClientUserAgent(stack); err != nil {
+	if err = addClientUserAgent(stack, options); err != nil {
 		return err
 	}
 	if err = smithyhttp.AddErrorCloseResponseBodyMiddleware(stack); err != nil {
@@ -244,7 +258,7 @@ func (c *Client) addOperationListPartsMiddlewares(stack *middleware.Stack, optio
 	if err = smithyhttp.AddCloseResponseBodyMiddleware(stack); err != nil {
 		return err
 	}
-	if err = swapWithCustomHTTPSignerMiddleware(stack, options); err != nil {
+	if err = addSetLegacyContextSigningOptionsMiddleware(stack); err != nil {
 		return err
 	}
 	if err = addOpListPartsValidationMiddleware(stack); err != nil {
@@ -274,7 +288,20 @@ func (c *Client) addOperationListPartsMiddlewares(stack *middleware.Stack, optio
 	if err = addRequestResponseLogging(stack, options); err != nil {
 		return err
 	}
+	if err = addDisableHTTPSMiddleware(stack, options); err != nil {
+		return err
+	}
+	if err = addSerializeImmutableHostnameBucketMiddleware(stack, options); err != nil {
+		return err
+	}
 	return nil
+}
+
+func (v *ListPartsInput) bucket() (string, bool) {
+	if v.Bucket == nil {
+		return "", false
+	}
+	return *v.Bucket, true
 }
 
 // ListPartsAPIClient is a client that implements the ListParts operation.
@@ -310,8 +337,8 @@ func NewListPartsPaginator(client ListPartsAPIClient, params *ListPartsInput, op
 	}
 
 	options := ListPartsPaginatorOptions{}
-	if params.MaxParts != 0 {
-		options.Limit = params.MaxParts
+	if params.MaxParts != nil {
+		options.Limit = *params.MaxParts
 	}
 
 	for _, fn := range optFns {
@@ -341,7 +368,11 @@ func (p *ListPartsPaginator) NextPage(ctx context.Context, optFns ...func(*Optio
 	params := *p.params
 	params.PartNumberMarker = p.nextToken
 
-	params.MaxParts = p.options.Limit
+	var limit *int32
+	if p.options.Limit > 0 {
+		limit = &p.options.Limit
+	}
+	params.MaxParts = limit
 
 	result, err := p.client.ListParts(ctx, &params, optFns...)
 	if err != nil {
@@ -351,7 +382,7 @@ func (p *ListPartsPaginator) NextPage(ctx context.Context, optFns ...func(*Optio
 
 	prevToken := p.nextToken
 	p.nextToken = nil
-	if result.IsTruncated {
+	if result.IsTruncated != nil && *result.IsTruncated {
 		p.nextToken = result.NextPartNumberMarker
 	}
 
@@ -369,7 +400,6 @@ func newServiceMetadataMiddleware_opListParts(region string) *awsmiddleware.Regi
 	return &awsmiddleware.RegisterServiceMetadata{
 		Region:        region,
 		ServiceID:     ServiceID,
-		SigningName:   "s3",
 		OperationName: "ListParts",
 	}
 }

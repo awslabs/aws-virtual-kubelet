@@ -4,6 +4,7 @@ package s3
 
 import (
 	"context"
+	"fmt"
 	awsmiddleware "github.com/aws/aws-sdk-go-v2/aws/middleware"
 	"github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	s3cust "github.com/aws/aws-sdk-go-v2/service/s3/internal/customizations"
@@ -60,6 +61,11 @@ type ListBucketIntelligentTieringConfigurationsInput struct {
 	noSmithyDocumentSerde
 }
 
+func (in *ListBucketIntelligentTieringConfigurationsInput) bindEndpointParams(p *EndpointParameters) {
+	p.Bucket = in.Bucket
+
+}
+
 type ListBucketIntelligentTieringConfigurationsOutput struct {
 
 	// The ContinuationToken that represents a placeholder from where this request
@@ -72,7 +78,7 @@ type ListBucketIntelligentTieringConfigurationsOutput struct {
 	// Indicates whether the returned list of analytics configurations is complete. A
 	// value of true indicates that the list is not complete and the
 	// NextContinuationToken will be provided for a subsequent request.
-	IsTruncated bool
+	IsTruncated *bool
 
 	// The marker used to continue this inventory configuration listing. Use the
 	// NextContinuationToken from this response to continue the listing in a subsequent
@@ -86,12 +92,22 @@ type ListBucketIntelligentTieringConfigurationsOutput struct {
 }
 
 func (c *Client) addOperationListBucketIntelligentTieringConfigurationsMiddlewares(stack *middleware.Stack, options Options) (err error) {
+	if err := stack.Serialize.Add(&setOperationInputMiddleware{}, middleware.After); err != nil {
+		return err
+	}
 	err = stack.Serialize.Add(&awsRestxml_serializeOpListBucketIntelligentTieringConfigurations{}, middleware.After)
 	if err != nil {
 		return err
 	}
 	err = stack.Deserialize.Add(&awsRestxml_deserializeOpListBucketIntelligentTieringConfigurations{}, middleware.After)
 	if err != nil {
+		return err
+	}
+	if err := addProtocolFinalizerMiddlewares(stack, options, "ListBucketIntelligentTieringConfigurations"); err != nil {
+		return fmt.Errorf("add protocol finalizers: %v", err)
+	}
+
+	if err = addlegacyEndpointContextSetter(stack, options); err != nil {
 		return err
 	}
 	if err = addSetLoggerMiddleware(stack, options); err != nil {
@@ -112,16 +128,13 @@ func (c *Client) addOperationListBucketIntelligentTieringConfigurationsMiddlewar
 	if err = addRetryMiddlewares(stack, options); err != nil {
 		return err
 	}
-	if err = addHTTPSignerV4Middleware(stack, options); err != nil {
-		return err
-	}
 	if err = awsmiddleware.AddRawResponseToMetadata(stack); err != nil {
 		return err
 	}
 	if err = awsmiddleware.AddRecordResponseTiming(stack); err != nil {
 		return err
 	}
-	if err = addClientUserAgent(stack); err != nil {
+	if err = addClientUserAgent(stack, options); err != nil {
 		return err
 	}
 	if err = smithyhttp.AddErrorCloseResponseBodyMiddleware(stack); err != nil {
@@ -130,7 +143,7 @@ func (c *Client) addOperationListBucketIntelligentTieringConfigurationsMiddlewar
 	if err = smithyhttp.AddCloseResponseBodyMiddleware(stack); err != nil {
 		return err
 	}
-	if err = swapWithCustomHTTPSignerMiddleware(stack, options); err != nil {
+	if err = addSetLegacyContextSigningOptionsMiddleware(stack); err != nil {
 		return err
 	}
 	if err = addOpListBucketIntelligentTieringConfigurationsValidationMiddleware(stack); err != nil {
@@ -160,14 +173,26 @@ func (c *Client) addOperationListBucketIntelligentTieringConfigurationsMiddlewar
 	if err = addRequestResponseLogging(stack, options); err != nil {
 		return err
 	}
+	if err = addDisableHTTPSMiddleware(stack, options); err != nil {
+		return err
+	}
+	if err = addSerializeImmutableHostnameBucketMiddleware(stack, options); err != nil {
+		return err
+	}
 	return nil
+}
+
+func (v *ListBucketIntelligentTieringConfigurationsInput) bucket() (string, bool) {
+	if v.Bucket == nil {
+		return "", false
+	}
+	return *v.Bucket, true
 }
 
 func newServiceMetadataMiddleware_opListBucketIntelligentTieringConfigurations(region string) *awsmiddleware.RegisterServiceMetadata {
 	return &awsmiddleware.RegisterServiceMetadata{
 		Region:        region,
 		ServiceID:     ServiceID,
-		SigningName:   "s3",
 		OperationName: "ListBucketIntelligentTieringConfigurations",
 	}
 }

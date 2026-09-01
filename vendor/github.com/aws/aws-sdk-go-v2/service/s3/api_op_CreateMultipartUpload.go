@@ -4,6 +4,7 @@ package s3
 
 import (
 	"context"
+	"fmt"
 	awsmiddleware "github.com/aws/aws-sdk-go-v2/aws/middleware"
 	"github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	s3cust "github.com/aws/aws-sdk-go-v2/service/s3/internal/customizations"
@@ -203,7 +204,7 @@ type CreateMultipartUploadInput struct {
 	// AccessPointName-AccountId.outpostID.s3-outposts.Region.amazonaws.com . When you
 	// use this action with S3 on Outposts through the Amazon Web Services SDKs, you
 	// provide the Outposts access point ARN in place of the bucket name. For more
-	// information about S3 on Outposts ARNs, see What is S3 on Outposts (https://docs.aws.amazon.com/AmazonS3/latest/userguide/S3onOutposts.html)
+	// information about S3 on Outposts ARNs, see What is S3 on Outposts? (https://docs.aws.amazon.com/AmazonS3/latest/userguide/S3onOutposts.html)
 	// in the Amazon S3 User Guide.
 	//
 	// This member is required.
@@ -219,11 +220,11 @@ type CreateMultipartUploadInput struct {
 	ACL types.ObjectCannedACL
 
 	// Specifies whether Amazon S3 should use an S3 Bucket Key for object encryption
-	// with server-side encryption using AWS KMS (SSE-KMS). Setting this header to true
-	// causes Amazon S3 to use an S3 Bucket Key for object encryption with SSE-KMS.
-	// Specifying this header with an object action doesn’t affect bucket-level
-	// settings for S3 Bucket Key.
-	BucketKeyEnabled bool
+	// with server-side encryption using Key Management Service (KMS) keys (SSE-KMS).
+	// Setting this header to true causes Amazon S3 to use an S3 Bucket Key for object
+	// encryption with SSE-KMS. Specifying this header with an object action doesn’t
+	// affect bucket-level settings for S3 Bucket Key.
+	BucketKeyEnabled *bool
 
 	// Specifies caching behavior along the request/reply chain.
 	CacheControl *string
@@ -284,9 +285,11 @@ type CreateMultipartUploadInput struct {
 	ObjectLockRetainUntilDate *time.Time
 
 	// Confirms that the requester knows that they will be charged for the request.
-	// Bucket owners need not specify this parameter in their requests. For information
-	// about downloading objects from Requester Pays buckets, see Downloading Objects
-	// in Requester Pays Buckets (https://docs.aws.amazon.com/AmazonS3/latest/dev/ObjectsinRequesterPaysBuckets.html)
+	// Bucket owners need not specify this parameter in their requests. If either the
+	// source or destination Amazon S3 bucket has Requester Pays enabled, the requester
+	// will pay for corresponding charges to copy the object. For information about
+	// downloading objects from Requester Pays buckets, see Downloading Objects in
+	// Requester Pays Buckets (https://docs.aws.amazon.com/AmazonS3/latest/dev/ObjectsinRequesterPaysBuckets.html)
 	// in the Amazon S3 User Guide.
 	RequestPayer types.RequestPayer
 
@@ -311,17 +314,17 @@ type CreateMultipartUploadInput struct {
 	// JSON with the encryption context key-value pairs.
 	SSEKMSEncryptionContext *string
 
-	// Specifies the ID of the symmetric encryption customer managed key to use for
-	// object encryption. All GET and PUT requests for an object protected by Amazon
-	// Web Services KMS will fail if not made via SSL or using SigV4. For information
-	// about configuring using any of the officially supported Amazon Web Services SDKs
-	// and Amazon Web Services CLI, see Specifying the Signature Version in Request
-	// Authentication (https://docs.aws.amazon.com/AmazonS3/latest/dev/UsingAWSSDK.html#specify-signature-version)
+	// Specifies the ID (Key ID, Key ARN, or Key Alias) of the symmetric encryption
+	// customer managed key to use for object encryption. All GET and PUT requests for
+	// an object protected by KMS will fail if they're not made via SSL or using SigV4.
+	// For information about configuring any of the officially supported Amazon Web
+	// Services SDKs and Amazon Web Services CLI, see Specifying the Signature Version
+	// in Request Authentication (https://docs.aws.amazon.com/AmazonS3/latest/dev/UsingAWSSDK.html#specify-signature-version)
 	// in the Amazon S3 User Guide.
 	SSEKMSKeyId *string
 
 	// The server-side encryption algorithm used when storing this object in Amazon S3
-	// (for example, AES256, aws:kms ).
+	// (for example, AES256 , aws:kms ).
 	ServerSideEncryption types.ServerSideEncryption
 
 	// By default, Amazon S3 uses the STANDARD Storage Class to store newly created
@@ -341,6 +344,11 @@ type CreateMultipartUploadInput struct {
 	WebsiteRedirectLocation *string
 
 	noSmithyDocumentSerde
+}
+
+func (in *CreateMultipartUploadInput) bindEndpointParams(p *EndpointParameters) {
+	p.Bucket = in.Bucket
+
 }
 
 type CreateMultipartUploadOutput struct {
@@ -374,13 +382,13 @@ type CreateMultipartUploadOutput struct {
 	// AccessPointName-AccountId.outpostID.s3-outposts.Region.amazonaws.com . When you
 	// use this action with S3 on Outposts through the Amazon Web Services SDKs, you
 	// provide the Outposts access point ARN in place of the bucket name. For more
-	// information about S3 on Outposts ARNs, see What is S3 on Outposts (https://docs.aws.amazon.com/AmazonS3/latest/userguide/S3onOutposts.html)
+	// information about S3 on Outposts ARNs, see What is S3 on Outposts? (https://docs.aws.amazon.com/AmazonS3/latest/userguide/S3onOutposts.html)
 	// in the Amazon S3 User Guide.
 	Bucket *string
 
 	// Indicates whether the multipart upload uses an S3 Bucket Key for server-side
-	// encryption with Amazon Web Services KMS (SSE-KMS).
-	BucketKeyEnabled bool
+	// encryption with Key Management Service (KMS) keys (SSE-KMS).
+	BucketKeyEnabled *bool
 
 	// The algorithm that was used to create a checksum of the object.
 	ChecksumAlgorithm types.ChecksumAlgorithm
@@ -407,13 +415,12 @@ type CreateMultipartUploadOutput struct {
 	// holding JSON with the encryption context key-value pairs.
 	SSEKMSEncryptionContext *string
 
-	// If present, specifies the ID of the Amazon Web Services Key Management Service
-	// (Amazon Web Services KMS) symmetric encryption customer managed key that was
-	// used for the object.
+	// If present, specifies the ID of the Key Management Service (KMS) symmetric
+	// encryption customer managed key that was used for the object.
 	SSEKMSKeyId *string
 
 	// The server-side encryption algorithm used when storing this object in Amazon S3
-	// (for example, AES256, aws:kms ).
+	// (for example, AES256 , aws:kms ).
 	ServerSideEncryption types.ServerSideEncryption
 
 	// ID for the initiated multipart upload.
@@ -426,12 +433,22 @@ type CreateMultipartUploadOutput struct {
 }
 
 func (c *Client) addOperationCreateMultipartUploadMiddlewares(stack *middleware.Stack, options Options) (err error) {
+	if err := stack.Serialize.Add(&setOperationInputMiddleware{}, middleware.After); err != nil {
+		return err
+	}
 	err = stack.Serialize.Add(&awsRestxml_serializeOpCreateMultipartUpload{}, middleware.After)
 	if err != nil {
 		return err
 	}
 	err = stack.Deserialize.Add(&awsRestxml_deserializeOpCreateMultipartUpload{}, middleware.After)
 	if err != nil {
+		return err
+	}
+	if err := addProtocolFinalizerMiddlewares(stack, options, "CreateMultipartUpload"); err != nil {
+		return fmt.Errorf("add protocol finalizers: %v", err)
+	}
+
+	if err = addlegacyEndpointContextSetter(stack, options); err != nil {
 		return err
 	}
 	if err = addSetLoggerMiddleware(stack, options); err != nil {
@@ -452,16 +469,13 @@ func (c *Client) addOperationCreateMultipartUploadMiddlewares(stack *middleware.
 	if err = addRetryMiddlewares(stack, options); err != nil {
 		return err
 	}
-	if err = addHTTPSignerV4Middleware(stack, options); err != nil {
-		return err
-	}
 	if err = awsmiddleware.AddRawResponseToMetadata(stack); err != nil {
 		return err
 	}
 	if err = awsmiddleware.AddRecordResponseTiming(stack); err != nil {
 		return err
 	}
-	if err = addClientUserAgent(stack); err != nil {
+	if err = addClientUserAgent(stack, options); err != nil {
 		return err
 	}
 	if err = smithyhttp.AddErrorCloseResponseBodyMiddleware(stack); err != nil {
@@ -470,7 +484,7 @@ func (c *Client) addOperationCreateMultipartUploadMiddlewares(stack *middleware.
 	if err = smithyhttp.AddCloseResponseBodyMiddleware(stack); err != nil {
 		return err
 	}
-	if err = swapWithCustomHTTPSignerMiddleware(stack, options); err != nil {
+	if err = addSetLegacyContextSigningOptionsMiddleware(stack); err != nil {
 		return err
 	}
 	if err = addOpCreateMultipartUploadValidationMiddleware(stack); err != nil {
@@ -500,14 +514,26 @@ func (c *Client) addOperationCreateMultipartUploadMiddlewares(stack *middleware.
 	if err = addRequestResponseLogging(stack, options); err != nil {
 		return err
 	}
+	if err = addDisableHTTPSMiddleware(stack, options); err != nil {
+		return err
+	}
+	if err = addSerializeImmutableHostnameBucketMiddleware(stack, options); err != nil {
+		return err
+	}
 	return nil
+}
+
+func (v *CreateMultipartUploadInput) bucket() (string, bool) {
+	if v.Bucket == nil {
+		return "", false
+	}
+	return *v.Bucket, true
 }
 
 func newServiceMetadataMiddleware_opCreateMultipartUpload(region string) *awsmiddleware.RegisterServiceMetadata {
 	return &awsmiddleware.RegisterServiceMetadata{
 		Region:        region,
 		ServiceID:     ServiceID,
-		SigningName:   "s3",
 		OperationName: "CreateMultipartUpload",
 	}
 }
